@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App Name -->
+    <string name="app_name">מעקב אימונים</string>
+    
+    <!-- Days -->
+    <string name="day_sunday">יום ראשון</string>
+    <string name="day_monday">יום שני</string>
+    <string name="day_tuesday">יום שלישי</string>
+    <string name="day_wednesday">יום רביעי</string>
+    <string name="day_thursday">יום חמישי</string>
+    <string name="day_friday">יום שישי</string>
+    <string name="day_saturday">שבת</string>
+    <string name="sunday_short">א</string>
+    <string name="monday_short">ב</string>
+    <string name="tuesday_short">ג</string>
+    <string name="wednesday_short">ד</string>
+    <string name="thursday_short">ה</string>
+    <string name="friday_short">ו</string>
+    <string name="saturday_short">ש</string>
+    
+    <!-- Workout Day Names -->
+    <string name="workout_chest_shoulders">חזה וכתפיים</string>
+    <string name="workout_cardio">אירובי</string>
+    <string name="workout_legs">רגליים</string>
+    <string name="workout_back_arms">גב וידיים</string>
+    
+    <!-- Exercise Names (IDs 1-17 from original project) -->
+    <string name="exercise1">לחיצת חזה דמבלס</string>
+    <string name="exercise2">לחיצת חזה בכבל</string>
+    <string name="exercise3">פרפר במכונה</string>
+    <string name="exercise4">לחיצת כתפיים דמבלס</string>
+    <string name="exercise5">הרחקת כתפיים צידית</string>
+    <string name="exercise6">אימון HIIT</string>
+    <string name="exercise7">סקוואט</string>
+    <string name="exercise8">הקזאקי סקוואט</string>
+    <string name="exercise9">לאנג׳ס הליכה עם משקל</string>
+    <string name="exercise10">כפיפת רגליים במכונה</string>
+    <string name="exercise11">עליות על במה</string>
+    <string name="exercise12">ריצה ממושכת בדופק נמוך</string>
+    <string name="exercise13">משיכה בפולי עליון רחב</string>
+    <string name="exercise14">חתירה בפולי נמוך</string>
+    <string name="exercise15">פולאובר בכבל</string>
+    <string name="exercise16">כפיפת מרפקים עם דמבלס</string>
+    <string name="exercise17">יישור מרפקים בכבל</string>
+    
+    <!-- Additional Exercises (IDs 18-23) -->
+    <string name="exercise18">משיכות בארבל</string>
+    <string name="exercise19">משיכות כבל</string>
+    <string name="exercise20">סקוואט</string>
+    <string name="exercise21">הרמת כתפיים</string>
+    <string name="exercise22">לחיצת חזה בארבל</string>
+    <string name="exercise23">תרגיל פונקציונלי</string>
+    
+    <!-- Timer -->
+    <string name="rest_timer">טיימר מנוחה</string>
+    <string name="next_set">סט הבא</string>
+    <string name="stop">עצור</string>
+    <string name="minimize">רקע</string>
+    <string name="finish">סיום</string>
+    <string name="pause">השהה</string>
+    <string name="resume">המשך</string>
+    <string name="sets_completed">סטים הושלמו</string>
+    <string name="set_of">סט %1$d מתוך %2$d</string>
+    <string name="exercise_completed">תרגיל הושלם! 🔥</string>
+    <string name="all_sets_completed">כל הסטים הושלמו!</string>
+    <string name="rest_complete_start_set">זמן להתחיל סט %1$d!</string>
+    <string name="completed_all_sets">כל הסטים הושלמו בהצלחה!</string>
+    
+    <!-- Main Screen -->
+    <string name="workout">אימון</string>
+    <string name="settings">הגדרות</string>
+    <string name="statistics">סטטיסטיקה</string>
+    <string name="today_workout">אימון היום</string>
+    <string name="rest_day">יום מנוחה</string>
+    <string name="rest_day_message">היום יום מנוחה. תתאושש! 💪</string>
+    <string name="no_exercises">אין תרגילים</string>
+    <string name="add_exercise">הוסף תרגיל</string>
+    <string name="sets">סטים</string>
+    <string name="reps">חזרות</string>
+    <string name="weight">משקל</string>
+    <string name="kg">ק"ג</string>
+    <string name="start_rest">התחל מנוחה</string>
+    <string name="resume_rest">המשך מנוחה</string>
+    <string name="finished">הושלם</string>
+    <string name="mark_complete">סמן כהושלם</string>
+    
+    <!-- Settings -->
+    <string name="language">שפה</string>
+    <string name="language_hebrew">עברית</string>
+    <string name="language_english">English</string>
+    <string name="created_by">יוצר על ידי</string>
+    <string name="developer_name">חננאל סבג</string>
+    <string name="language_system">ברירת המערכת</string>
+    <string name="theme">ערכת נושא</string>
+    <string name="theme_light">בהיר</string>
+    <string name="theme_dark">כהה</string>
+    <string name="theme_system">ברירת המערכת</string>
+    <string name="notifications">התראות</string>
+    <string name="workout_reminders">תזכורות אימון</string>
+    <string name="add_reminder">הוסף תזכורת</string>
+    <string name="auto_reset_weekly">איפוס אוטומטי שבועי</string>
+    <string name="auto_reset_description">אפס אוטומטית את ההתקדמות בכל יום ראשון</string>
+    <string name="manual_reset">איפוס ידני</string>
+    <string name="reset_week">אפס שבוע</string>
+    <string name="reset_confirmation">האם אתה בטוח שברצונך לאפס את ההתקדמות השבועית?</string>
+    <string name="reset_confirmation_message">הפעולה תמחק את כל סימוני ההשלמה והסטים, אך תשמור משקלים והערות.</string>
+    <string name="confirm">אישור</string>
+    <string name="cancel">ביטול</string>
+    <string name="enabled_days">ימי אימון פעילים</string>
+    
+    <!-- Notifications -->
+    <string name="notification_channel_workout_reminders">תזכורות אימון</string>
+    <string name="notification_channel_timer">טיימר</string>
+    <string name="notification_channel_weekly">עדכונים שבועיים</string>
+    <string name="notification_workout_reminder_title">זמן לאימון! 💪</string>
+    <string name="notification_workout_reminder_message">אל תדלג על האימון של היום</string>
+    <string name="notification_timer_complete_title">מנוחה הסתיימה!</string>
+    <string name="notification_timer_complete_message">זמן לסט הבא</string>
+    <string name="notification_weekly_reset_title">איפוס שבועי</string>
+    <string name="notification_weekly_reset_message">ההתקדמות השבועית שלך אופסה. המשך בכוח! 💪</string>
+    
+    <!-- Statistics -->
+    <string name="weekly_completion">השלמה שבועית</string>
+    <string name="exercises_completed">תרגילים הושלמו</string>
+    <string name="current_streak">רצף נוכחי</string>
+    <string name="days">ימים</string>
+    <string name="no_data">אין נתונים זמינים</string>
+    
+    <!-- Common -->
+    <string name="save">שמור</string>
+    <string name="delete">מחק</string>
+    <string name="edit">ערוך</string>
+    <string name="close">סגור</string>
+    <string name="done">סיום</string>
+    <string name="back">חזרה</string>
+    <string name="weight_not_set">יש להגדיר משקל לתרגיל</string>
+    <string name="add_custom_exercise">הוסף תרגיל מותאם</string>
+    <string name="exercise_name">שם התרגיל</string>
+    <string name="rest_time_seconds">זמן מנוחה (שניות)</string>
+    
+    <!-- Alarms Screen -->
+    <string name="workout_alarms">התראות אימון</string>
+    <string name="add_alarm">הוסף התראה</string>
+    <string name="no_alarms">אין התראות מוגדרות</string>
+    <string name="no_alarms_message">הוסף התראה כדי לקבל תזכורות לאימונים</string>
+    <string name="alarm_time">שעה</string>
+    <string name="alarm_days">ימים</string>
+    <string name="alarm_message">הודעה</string>
+    <string name="alarm_enabled">התראה פעילה</string>
+    <string name="select_time">בחר שעה</string>
+    <string name="select_days">בחר ימים</string>
+    <string name="select_days_hint">לחץ על ימים כדי לבחור מתי להתריע</string>
+    <string name="custom_message">הודעה מותאמת אישית (אופציונלי)</string>
+    <string name="edit_alarm">ערוך התראה</string>
+    <string name="delete_alarm">מחק התראה</string>
+    <string name="delete_alarm_confirmation">האם אתה בטוח שברצונך למחוק את ההתראה?</string>
+    <string name="has_weight_question">תרגיל עם משקל?</string>
+    <string name="has_weight_hint">הפעל אם התרגיל דורש משקל (דמבלס, ברבל וכו\')</string>
+    <string name="completed_badge">הושלם</string>
+</resources>
