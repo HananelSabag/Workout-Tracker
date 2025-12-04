@@ -40,8 +40,12 @@ fun TimerDialog(
     val timeLeft = timerState.timeLeft
     
     Dialog(
-        onDismissRequest = onClose,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+        onDismissRequest = { /* Do nothing - only close button should dismiss */ },
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            dismissOnBackPress = false,
+            dismissOnClickOutside = false
+        )
     ) {
         Card(
             modifier = modifier
@@ -69,14 +73,12 @@ fun TimerDialog(
                         fontWeight = FontWeight.Bold
                     )
                     IconButton(
-                        onClick = {
-                            onStop()
-                        }
+                        onClick = onClose
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = stringResource(R.string.stop),
-                            tint = MaterialTheme.colorScheme.error
+                            contentDescription = stringResource(R.string.close),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }

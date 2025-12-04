@@ -37,7 +37,10 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
     private fun setInitialDay() {
         viewModelScope.launch {
             val prefs = repository.getUserPreferences()
-            _selectedDayIndex.value = if (prefs.autoOpenCurrentDay) {
+            // Auto-open logic: Only use current day if toggle is ON AND this is first launch (lastViewedDay is 0)
+            // After first use, ALWAYS restore last viewed day (even if toggle is on)
+            // This prevents annoying jumps when user minimizes app during workout
+            _selectedDayIndex.value = if (prefs.autoOpenCurrentDay && prefs.lastViewedDayIndex == 0) {
                 DateUtils.getCurrentDayIndex()
             } else {
                 prefs.lastViewedDayIndex
@@ -283,6 +286,25 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
                 currentDays[index] = currentDays[index].copy(customName = newName)
                 _workoutDays.value = currentDays
                 repository.saveWorkoutStructure(currentDays)
+            }
+        }
+    }
+    
+    fun deleteExercise(dayId: String, exerciseId: String) {
+        viewModelScope.launch {
+            val currentDays = _workoutDays.value.toMutableList()
+            val dayIndex = currentDays.indexOfFirst { it.id == dayId }
+            
+            if (dayIndex != -1) {
+                val day = currentDays[dayIndex]
+                val updatedExercises = day.exercises.filter { it.id != exerciseId }
+                currentDays[dayIndex] = day.copy(exercises = updatedExercises)
+                
+                _workoutDays.value = currentDays
+                repository.saveWorkoutStructure(currentDays)
+                
+                // Also remove from progress
+                repository.removeExerciseProgress(exerciseId)
             }
         }
     }

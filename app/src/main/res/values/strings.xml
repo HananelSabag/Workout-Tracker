@@ -11,13 +11,13 @@
     <string name="day_thursday">יום חמישי</string>
     <string name="day_friday">יום שישי</string>
     <string name="day_saturday">שבת</string>
-    <string name="sunday_short">א</string>
-    <string name="monday_short">ב</string>
-    <string name="tuesday_short">ג</string>
-    <string name="wednesday_short">ד</string>
-    <string name="thursday_short">ה</string>
-    <string name="friday_short">ו</string>
-    <string name="saturday_short">ש</string>
+    <string name="sunday_short">א׳</string>
+    <string name="monday_short">ב׳</string>
+    <string name="tuesday_short">ג׳</string>
+    <string name="wednesday_short">ד׳</string>
+    <string name="thursday_short">ה׳</string>
+    <string name="friday_short">ו׳</string>
+    <string name="saturday_short">ש׳</string>
     
     <!-- Workout Day Names -->
     <string name="workout_chest_shoulders">חזה וכתפיים</string>
@@ -162,7 +162,12 @@
     <!-- General Settings -->
     <string name="general">כללי</string>
     <string name="auto_open_current_day">פתח אוטומטית ליום הנוכחי</string>
-    <string name="auto_open_current_day_desc">בפתיחת האפליקציה, עבור לאימון של היום</string>
+    <string name="auto_open_current_day_desc">בשימוש ראשון, עבור לאימון של היום. לאחר מכן, תמיד חזור ליום האחרון שנצפה</string>
+    <string name="help">עזרה</string>
+    <string name="manage_workout_builder">נהל ימי אימון ותרגילים</string>
+    <string name="reopen_onboarding">פתח מדריך התחלה מחדש</string>
+    <string name="enable_friday">אפשר יום שישי</string>
+    <string name="enable_saturday">אפשר יום שבת</string>
     
     <!-- Muscle Groups -->
     <string name="muscle_chest">חזה</string>
@@ -240,11 +245,14 @@
     
     <!-- Manage Workout Days -->
     <string name="manage_days">ניהול ימי אימון</string>
+    <string name="manage_days_desc">ניהול הימים נעשה דרך בונה האימונים (כפתור העזרה בהגדרות)</string>
     <string name="rename_day">שנה שם יום</string>
     <string name="enter_day_name">הזן שם יום אימון</string>
     <string name="add_workout_day">הוסף יום אימון</string>
     <string name="remove_day">הסר יום</string>
     <string name="custom_workout_day">יום אימון מותאם</string>
+    <string name="select_days_for_week">בחר ימים לשבוע שלך</string>
+    <string name="select_days_desc">לחץ על ימים להוספה או הסרה. בחר רק את הימים שאתה מתאמן בהם.</string>
     
     <!-- Timer Notification Actions -->
     <string name="paused">מושהה</string>
@@ -257,5 +265,42 @@
     <string name="onboarding_feature_2">טיימר מנוחה עם מעקב סטים</string>
     <string name="onboarding_feature_3">40+ תרגילים מוכנים מראש</string>
     <string name="onboarding_feature_4">תמיכה בעברית ואנגלית</string>
+    <string name="onboarding_feature_5">פתיחה אוטומטית על היום הנוכחי</string>
+    <string name="onboarding_feature_5_desc">האפליקציה נפתחת ישירות על אימון היום, וזוכרת את היום האחרון שצפית בו</string>
+    <string name="onboarding_feature_6">איפוס שבועי אוטומטי</string>
+    <string name="onboarding_feature_6_desc">התקדמות מתאפסת אוטומטית כל שבוע - או ידנית לפי בחירתך</string>
+    <string name="onboarding_feature_7">ניהול ימים גמיש</string>
+    <string name="onboarding_feature_7_desc">בחר אילו ימים לכלול בשבוע שלך, כולל שישי ושבת</string>
     <string name="get_started">בואו נתחיל!</string>
+    <string name="next">הבא</string>
+    <string name="skip">דלג</string>
+    <string name="finish_setup">סיים הגדרה</string>
+    <string name="onboarding_page1_title">ברוכים הבאים!</string>
+    <string name="onboarding_page1_subtitle">מעקב אימונים חכם ופשוט</string>
+    <string name="onboarding_page2_title">בנה את תוכנית האימונים השבועית שלך</string>
+    <string name="onboarding_page2_subtitle">הגדר תרגילים לכל יום - תמיד אפשר לשנות מאוחר יותר</string>
+    <string name="onboarding_page2_quick_start">התחלה מהירה:</string>
+    <string name="use_default_program">השתמש בתוכנית ברירת מחדל</string>
+    <string name="use_default_program_desc">תוכנית מלאה עם 5 ימי אימון - חזה, גב, רגליים, זרועות וקרדיו</string>
+    <string name="customize_workouts">בנה תוכנית משלך</string>
+    <string name="customize_workouts_desc">בחר תרגילים מותאמים אישית לכל יום</string>
+    <string name="add_exercises_to_day">הוסף תרגילים ל%s</string>
+    <string name="no_exercises_added">לא נוספו תרגילים</string>
+    <string name="tap_to_add">לחץ להוספת תרגילים</string>
+    <string name="enable_notifications_title">אפשר התראות</string>
+    <string name="enable_notifications_desc">קבל תזכורות לאימונים והתראות טיימר</string>
+    <string name="allow_notifications">אפשר התראות</string>
+    <string name="notifications_granted">הרשאות התראות אושרו ✓</string>
+    <string name="can_change_later">ניתן לשנות בכל עת דרך כפתור העזרה בהגדרות</string>
+    <string name="onboarding_features_title">מה תקבל:</string>
+    <string name="workout_day_name_hint">למשל: יום חזה, גב וביצפס</string>
+    <string name="workout_title">כותרת אימון</string>
+    <string name="workout_title_hint">למשל: כתפיים, גב וביצפס, רגליים</string>
+    <string name="suggested_exercises">מומלץ בשבילך</string>
+    <string name="exercise_suggestions_for">תרגילים ל%s</string>
+    <string name="add_exercise_to_day">הוסף ל%s</string>
+    <string name="setup_day">הגדר %s</string>
+    <string name="workout_builder">בונה אימונים</string>
+    <string name="start_from_empty">התחל מרשימה ריקה</string>
+    <string name="start_from_empty_desc">תוסיף תרגילים ידנית בהמשך</string>
 </resources>

@@ -204,5 +204,28 @@ class WorkoutRepository(private val context: Context) {
         )
         saveWorkoutProgress(reset)
     }
+    
+    suspend fun removeExerciseProgress(exerciseId: String) {
+        val progress = getWorkoutProgress()
+        val updatedCompleted = progress.completedExercises.toMutableMap()
+        val updatedWeights = progress.exerciseWeights.toMutableMap()
+        val updatedNotes = progress.exerciseNotes.toMutableMap()
+        val updatedSets = progress.exerciseCompletedSets.toMutableMap()
+        
+        updatedCompleted.remove(exerciseId)
+        updatedWeights.remove(exerciseId)
+        updatedNotes.remove(exerciseId)
+        updatedSets.remove(exerciseId)
+        
+        saveWorkoutProgress(
+            progress.copy(
+                completedExercises = updatedCompleted,
+                exerciseWeights = updatedWeights,
+                exerciseNotes = updatedNotes,
+                exerciseCompletedSets = updatedSets,
+                lastUpdateTime = System.currentTimeMillis()
+            )
+        )
+    }
 }
 

@@ -11,12 +11,15 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.foundation.Image
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -41,10 +44,19 @@ fun WorkoutScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val repository = remember { com.hananel.workouttracker2.data.repository.WorkoutRepository(context) }
     val workoutDays by viewModel.workoutDays.collectAsState()
     val workoutProgress by viewModel.workoutProgress.collectAsState()
     val timerState by viewModel.timerState.collectAsState()
     val selectedDayIndex by viewModel.selectedDayIndex.collectAsState()
+    
+    var enabledDays by remember { mutableStateOf(listOf(0, 1, 2, 3, 4)) }
+    
+    LaunchedEffect(Unit) {
+        repository.getUserPreferencesFlow().collect { prefs ->
+            enabledDays = prefs.enabledDays
+        }
+    }
     
     // Recompute currentWorkout when selectedDayIndex or workoutDays change
     val currentWorkout = remember(selectedDayIndex, workoutDays) {
@@ -53,7 +65,7 @@ fun WorkoutScreen(
     var showResetDialog by remember { mutableStateOf(false) }
     var showAddExerciseMenu by remember { mutableStateOf(false) }
     var showCreateExerciseDialog by remember { mutableStateOf(false) }
-    var showTimerDialog by remember { mutableStateOf(true) } // Show dialog when timer is active
+    var showTimerDialog by remember { mutableStateOf(false) } // Only show when user clicks banner
     
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -62,12 +74,22 @@ fun WorkoutScreen(
         topBar = {
             TopAppBar(
                 title = { 
-                    Text(
-                        "WorkoutTracker 2",
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 22.sp
-                    ) 
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Image(
+                            painter = painterResource(R.drawable.workout_logo),
+                            contentDescription = null,
+                            modifier = Modifier.size(32.dp)
+                        )
+                        Text(
+                            stringResource(R.string.app_name),
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 22.sp
+                        )
+                    }
                 },
                 actions = {
                     // Reset Week Button (Blue)
@@ -117,7 +139,7 @@ fun WorkoutScreen(
             // Day Selector
             DaySelector(
                 selectedDayIndex = selectedDayIndex,
-                enabledDays = listOf(0, 1, 2, 3, 4), // Default Sun-Thu
+                enabledDays = enabledDays,
                 onDaySelected = { viewModel.selectDay(it) }
             )
             
@@ -224,6 +246,11 @@ fun WorkoutScreen(
                                 if (newWeight > 0) {
                                     viewModel.updateExerciseWeight(exercise.id, newWeight)
                                 }
+                            },
+                            onDeleteExercise = {
+                                currentWorkout?.let { workout ->
+                                    viewModel.deleteExercise(workout.id, exercise.id)
+                                }
                             }
                         )
                     }
@@ -295,9 +322,8 @@ fun WorkoutScreen(
         LaunchedEffect(timerState) {
             if (timerState == null) {
                 showTimerDialog = false
-            } else {
-                showTimerDialog = true
             }
+            // Don't auto-open dialog when timer is running - only when user clicks banner
         }
         
         // Add Exercise Menu

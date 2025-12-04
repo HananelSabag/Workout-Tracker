@@ -162,7 +162,12 @@
     <!-- General Settings -->
     <string name="general">General</string>
     <string name="auto_open_current_day">Auto-open current day</string>
-    <string name="auto_open_current_day_desc">When opening the app, jump to today\'s workout</string>
+    <string name="auto_open_current_day_desc">On first use, jump to today\'s workout. After that, always return to last viewed day</string>
+    <string name="help">Help</string>
+    <string name="manage_workout_builder">Manage workout days and exercises</string>
+    <string name="reopen_onboarding">Reopen onboarding guide</string>
+    <string name="enable_friday">Enable Friday</string>
+    <string name="enable_saturday">Enable Saturday</string>
     
     <!-- Muscle Groups -->
     <string name="muscle_chest">Chest</string>
@@ -240,11 +245,14 @@
     
     <!-- Manage Workout Days -->
     <string name="manage_days">Manage Workout Days</string>
+    <string name="manage_days_desc">Manage days through the workout builder (Help button in Settings)</string>
     <string name="rename_day">Rename Day</string>
     <string name="enter_day_name">Enter workout day name</string>
     <string name="add_workout_day">Add Workout Day</string>
     <string name="remove_day">Remove Day</string>
     <string name="custom_workout_day">Custom Workout Day</string>
+    <string name="select_days_for_week">Select days for your week</string>
+    <string name="select_days_desc">Tap days to add or remove. Choose only the days you work out.</string>
     
     <!-- Timer Notification Actions -->
     <string name="paused">Paused</string>
@@ -257,6 +265,43 @@
     <string name="onboarding_feature_2">Rest timer with set tracking</string>
     <string name="onboarding_feature_3">40+ pre-made exercises</string>
     <string name="onboarding_feature_4">Hebrew and English support</string>
+    <string name="onboarding_feature_5">Auto-open current day</string>
+    <string name="onboarding_feature_5_desc">App opens directly to today\'s workout and remembers your last viewed day</string>
+    <string name="onboarding_feature_6">Automatic weekly reset</string>
+    <string name="onboarding_feature_6_desc">Progress resets automatically each week - or manually when you choose</string>
+    <string name="onboarding_feature_7">Flexible day management</string>
+    <string name="onboarding_feature_7_desc">Choose which days to include in your week, including Friday and Saturday</string>
     <string name="get_started">Let\'s Get Started!</string>
+    <string name="next">Next</string>
+    <string name="skip">Skip</string>
+    <string name="finish_setup">Finish Setup</string>
+    <string name="onboarding_page1_title">Welcome!</string>
+    <string name="onboarding_page1_subtitle">Smart and simple workout tracking</string>
+    <string name="onboarding_page2_title">Build Your Weekly Workout Plan</string>
+    <string name="onboarding_page2_subtitle">Set up exercises for each day - you can always change later</string>
+    <string name="onboarding_page2_quick_start">Quick Start:</string>
+    <string name="use_default_program">Use Default Program</string>
+    <string name="use_default_program_desc">Complete program with 5 workout days - chest, back, legs, arms, and cardio</string>
+    <string name="customize_workouts">Build Your Own</string>
+    <string name="customize_workouts_desc">Choose custom exercises for each day</string>
+    <string name="add_exercises_to_day">Add exercises to %s</string>
+    <string name="no_exercises_added">No exercises added</string>
+    <string name="tap_to_add">Tap to add exercises</string>
+    <string name="enable_notifications_title">Enable Notifications</string>
+    <string name="enable_notifications_desc">Get workout reminders and timer alerts</string>
+    <string name="allow_notifications">Allow Notifications</string>
+    <string name="notifications_granted">Notification permissions granted ✓</string>
+    <string name="can_change_later">You can always change this later via the Help button in Settings</string>
+    <string name="onboarding_features_title">What you\'ll get:</string>
+    <string name="workout_day_name_hint">e.g., Chest Day, Back &amp; Biceps</string>
+    <string name="workout_title">Workout Title</string>
+    <string name="workout_title_hint">e.g., Shoulders, Back &amp; Biceps, Legs</string>
+    <string name="suggested_exercises">Suggested for you</string>
+    <string name="exercise_suggestions_for">Exercises for %s</string>
+    <string name="add_exercise_to_day">Add to %s</string>
+    <string name="setup_day">Set up %s</string>
+    <string name="workout_builder">Workout Builder</string>
+    <string name="start_from_empty">Start from Empty</string>
+    <string name="start_from_empty_desc">You\'ll add exercises manually later</string>
 </resources>
 

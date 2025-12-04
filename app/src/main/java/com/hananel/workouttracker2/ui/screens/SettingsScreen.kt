@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.outlined.HelpOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -35,11 +36,29 @@ fun SettingsScreen(
     var showResetDialog by remember { mutableStateOf(false) }
     var showLanguageDialog by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
+    var showWorkoutBuilder by remember { mutableStateOf(false) }
     
     LaunchedEffect(Unit) {
         repository.getUserPreferencesFlow().collect { prefs ->
             preferences = prefs
         }
+    }
+    
+    // Show Workout Builder if requested
+    if (showWorkoutBuilder) {
+        WorkoutBuilderScreen(
+            onFinish = { workoutDays ->
+                scope.launch {
+                    repository.saveWorkoutStructure(workoutDays)
+                    // Update enabledDays based on selected days
+                    val enabledDays = workoutDays.map { day -> day.dayIndex }.sorted()
+                    repository.saveUserPreferences(preferences.copy(enabledDays = enabledDays))
+                    showWorkoutBuilder = false
+                }
+            },
+            onBack = { showWorkoutBuilder = false }
+        )
+        return
     }
     
     Scaffold(
@@ -53,6 +72,28 @@ fun SettingsScreen(
                             contentDescription = stringResource(R.string.back)
                         )
                     }
+                },
+                actions = {
+                    IconButton(
+                        onClick = {
+                            scope.launch {
+                                repository.saveUserPreferences(
+                                    preferences.copy(hasCompletedOnboarding = false)
+                                )
+                                // Restart activity to show onboarding
+                                (context as? Activity)?.let { activity ->
+                                    activity.finish()
+                                    activity.startActivity(Intent(activity, activity::class.java))
+                                }
+                            }
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.HelpOutline,
+                            contentDescription = stringResource(R.string.help),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             )
         },
@@ -62,19 +103,10 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Language Section
-            item {
-                Text(
-                    text = stringResource(R.string.language),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(vertical = 8.dp)
-                )
-            }
-            
+            // Language
             item {
                 Card(
                     onClick = { showLanguageDialog = true },
@@ -96,16 +128,7 @@ fun SettingsScreen(
                 }
             }
             
-            // Theme Section
-            item {
-                Text(
-                    text = stringResource(R.string.theme),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(vertical = 8.dp, horizontal = 0.dp).padding(top = 16.dp)
-                )
-            }
-            
+            // Theme
             item {
                 Card(
                     onClick = { showThemeDialog = true },
@@ -127,16 +150,7 @@ fun SettingsScreen(
                 }
             }
             
-            // General Section
-            item {
-                Text(
-                    text = stringResource(R.string.general),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(vertical = 8.dp, horizontal = 0.dp).padding(top = 16.dp)
-                )
-            }
-            
+            // Auto Open Current Day
             item {
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Row(
@@ -166,16 +180,7 @@ fun SettingsScreen(
                 }
             }
             
-            // Notifications Section
-            item {
-                Text(
-                    text = stringResource(R.string.notifications),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(vertical = 8.dp, horizontal = 0.dp).padding(top = 16.dp)
-                )
-            }
-            
+            // Notifications
             item {
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Row(
@@ -200,6 +205,7 @@ fun SettingsScreen(
                 }
             }
             
+            // Auto Reset Weekly
             item {
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Row(
@@ -231,16 +237,25 @@ fun SettingsScreen(
                 }
             }
             
-            // Reset Section
+            // Manage Workout Builder
             item {
-                Text(
-                    text = stringResource(R.string.manual_reset),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(vertical = 8.dp, horizontal = 0.dp).padding(top = 16.dp)
-                )
+                Card(
+                    onClick = { showWorkoutBuilder = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(text = stringResource(R.string.manage_workout_builder))
+                    }
+                }
             }
             
+            // Reset Button
             item {
                 Button(
                     onClick = { showResetDialog = true },
@@ -253,13 +268,13 @@ fun SettingsScreen(
                 }
             }
             
-            // Footer - Created by Hananel Sabag
+            // Footer
             item {
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(16.dp))
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 16.dp),
+                        .padding(vertical = 12.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(

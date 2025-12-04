@@ -14,7 +14,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.hananel.workouttracker2.R
 import com.hananel.workouttracker2.data.ExerciseBank
 import com.hananel.workouttracker2.data.models.ExerciseBankItem
@@ -65,19 +67,26 @@ fun ExerciseCatalogScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Muscle Group Filter Tabs
+            // Muscle Group Filter Tabs - Larger, more touch-friendly
             LazyRow(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    .padding(vertical = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp)
             ) {
                 // "All" filter chip
                 item {
                     FilterChip(
                         selected = selectedMuscleGroup == null,
                         onClick = { selectedMuscleGroup = null },
-                        label = { Text(stringResource(R.string.all_exercises)) },
+                        label = { 
+                            Text(
+                                stringResource(R.string.all_exercises),
+                                fontSize = 15.sp,
+                                fontWeight = if (selectedMuscleGroup == null) FontWeight.Bold else FontWeight.Normal
+                            )
+                        },
                         leadingIcon = if (selectedMuscleGroup == null) {
                             {
                                 Icon(
@@ -86,7 +95,8 @@ fun ExerciseCatalogScreen(
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
-                        } else null
+                        } else null,
+                        modifier = Modifier.height(48.dp)
                     )
                 }
                 
@@ -95,7 +105,14 @@ fun ExerciseCatalogScreen(
                     FilterChip(
                         selected = selectedMuscleGroup == muscle,
                         onClick = { selectedMuscleGroup = muscle },
-                        label = { Text(muscle) }
+                        label = { 
+                            Text(
+                                muscle,
+                                fontSize = 15.sp,
+                                fontWeight = if (selectedMuscleGroup == muscle) FontWeight.Bold else FontWeight.Normal
+                            )
+                        },
+                        modifier = Modifier.height(48.dp)
                     )
                 }
             }
