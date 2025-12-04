@@ -1,102 +1,128 @@
 # 🏋️ Workout Tracker - Android App
 
-A professional, clean, and maintainable Android workout tracking application built with Jetpack Compose and Material 3.
+A professional, feature-rich Android workout tracking application built with Jetpack Compose and Material 3. Designed for complete flexibility and ease of use.
 
-## 📱 Features
+## 🎯 Core Philosophy
 
-### Core Functionality
-- ✅ **Weekly Workout Tracking** - Default Sunday-Thursday schedule (customizable in settings)
-- ✅ **Exercise Bank System** - 40+ pre-made exercises with muscle group categorization
-- ✅ **Exercise Catalog** - Beautiful catalog UI with filtering by muscle groups
-- ✅ **Set-Based Workout System** - Track individual sets per exercise
-- ✅ **Enhanced Rest Timer** - Foreground service with pause/resume controls
-- ✅ **Timer Notifications** - Countdown display with pause/resume/stop actions in notification
-- ✅ **Exercise Completion** - Auto-mark exercises as complete when all sets are done
-- ✅ **Weight Tracking** - Track weight per exercise with persistent history
-- ✅ **Weekly Reset** - Manual button (required), optional automatic with notification
-- ✅ **Bilingual Support** - Hebrew & English with full RTL support for Hebrew
-- ✅ **Theme Support** - Light/Dark/System with beautiful design for both
-- ✅ **Smart Notifications** - Workout reminders with custom times and days
-- ✅ **Onboarding Experience** - Welcome screen for first-time users
-- ✅ **Flexible Day View** - Auto-open current day (optional) or remember last viewed day
+**Your Workout, Your Way** - Complete control over your training schedule with a beautiful, intuitive interface.
 
-### State Persistence
-- All progress is saved immediately to DataStore
-- Timer state persists across app restarts
-- Completed sets are tracked and restored
-- Weights and notes are preserved across weekly resets
+## ✨ Key Features
 
-### NEW: Exercise Bank (v2.0)
-- **40+ Pre-Made Exercises** organized by muscle groups:
-  - Chest: 6 exercises (dumbbell, barbell, cable, machine, bodyweight)
-  - Back: 6 exercises (pulldowns, rows, pullups, deadlift)
-  - Shoulders: 5 exercises (presses, raises, rear delts)
-  - Arms: 6 exercises (biceps and triceps variations)
-  - Legs: 9 exercises (squats, lunges, curls, extensions, calves)
-  - Core: 4 exercises (plank, crunches, twists, leg raises)
-  - Cardio: 5 exercises (HIIT, running, cycling, rowing, elliptical)
-- **Smart Filtering** by muscle groups
-- **Beautiful Catalog UI** with Material 3 design
-- **Bilingual Exercise Names** - All exercises named in Hebrew and English
-- **Quick Add** - Add exercises from catalog or create custom ones
+### 🚀 Dynamic Workout Builder (v2.1)
+- **Interactive Day Selection** - Choose which days you train (Sunday through Saturday)
+- **Custom Workout Titles** - Name each day's workout (e.g., "Chest Day", "Back & Biceps", "Leg Day")
+- **Flexible Exercise Management** - Add, remove, or reorder exercises anytime
+- **40+ Pre-Made Exercises** - Comprehensive exercise library organized by muscle groups
+- **Smart Filtering** - Find exercises by category (Chest, Back, Shoulders, Arms, Legs, Core, Cardio)
+- **Custom Exercises** - Create your own exercises with custom names and parameters
+- **Access from Settings** - Modify your workout plan anytime without starting over
 
-### NEW: Enhanced Timer (v2.0)
-- **Countdown in Notification** - See remaining time without opening app
-- **Pause/Resume Controls** - Pause timer from notification (bathroom break, phone call)
-- **3 Notification Actions** - Pause/Resume, Next Set, Stop
-- **Progress Bar** - Visual progress in notification
+### 📋 Exercise Catalog System
+- **Comprehensive Library** - 40+ exercises covering all major muscle groups:
+  - **Chest** (6): Dumbbell press, barbell press, cable press, flyes, push-ups
+  - **Back** (6): Lat pulldowns, rows, pullups, deadlifts, pullovers
+  - **Shoulders** (5): Presses, lateral raises, front raises, rear delts
+  - **Arms** (6): Bicep curls, tricep extensions, hammer curls, dips
+  - **Legs** (9): Squats, lunges, leg press, curls, extensions, calf raises
+  - **Core** (4): Planks, crunches, Russian twists, leg raises
+  - **Cardio** (5): HIIT, running, cycling, rowing, elliptical
+- **Quick Add** - One-tap exercise addition from catalog
+- **Smart Defaults** - Pre-configured sets, reps, and rest times for each exercise
+- **Visual Organization** - Clean card-based UI with muscle group tags
+
+### 🎨 Enhanced Onboarding Experience
+- **Two-Step Setup** - Streamlined onboarding process
+  - **Page 1**: Feature showcase with notification permissions
+  - **Page 2**: Three setup options:
+    1. **Default Program** - 5-day workout plan ready to go
+    2. **Build Your Own** - Custom workout with day-by-day exercise selection
+    3. **Skip** - Start with empty schedule, add exercises as you go
+- **No Scrolling** - Everything visible without scrolling
+- **Swipe-Protected** - Prevents accidental navigation between pages
+- **Clean Design** - Modern, professional interface
+
+### ⏱️ Smart Rest Timer
 - **Foreground Service** - Timer never stops, even during phone calls
+- **Background Notifications** - See countdown in status bar
+- **In-App Banner** - Orange indicator shows active timer with time remaining
+- **Pause/Resume** - Take bathroom breaks without losing progress
+- **Set Tracking** - Automatic set completion and progression
+- **Click to Open** - Tap banner to open full timer dialog
+- **Proper Close Behavior** - X and Background buttons work correctly now
 
-### NEW: User Experience (v2.0)
-- **Onboarding Screen** - Welcoming experience for first-time users
-- **Auto-Open Toggle** - Choose to auto-jump to today's workout or stay on last viewed day
-- **Data Preservation** - Updates never overwrite existing workout structure
-- **Upgrade-Safe** - Existing users keep all their exercises, weights, and progress
+### 📊 Workout Tracking
+- **Set-Based System** - Track individual sets per exercise
+- **Weight History** - Record and persist weight for each exercise
+- **Completion Tracking** - Visual checkmarks for completed exercises
+- **Progress Indicators** - See exactly where you are in your workout
+- **Weekly Reset** - Manual or automatic progress reset (preserves weights)
+
+### ⚙️ Flexible Settings
+- **Language Support** - Hebrew (RTL) and English
+- **Theme Options** - Light, Dark, or System Default
+- **Day Management** - Enable/disable any days of the week
+- **Auto-Open Control** - Choose to jump to today's workout or remember last viewed
+- **Notification Control** - Customize workout reminders
+- **Workout Builder Access** - Modify your plan directly from settings
+
+### 🔔 Smart Notifications
+- **Workout Reminders** - Schedule notifications for training times
+- **Timer Alerts** - Get notified when rest period ends
+- **Weekly Reset** - Optional notification on automatic reset
+- **Persistent Timer** - See countdown in notification shade
 
 ## 🏗️ Architecture
 
-### Clean Architecture with Separation of Concerns
+### Clean Architecture with Modern Android Best Practices
 
 ```
 app/src/main/java/com/hananel/workouttracker2/
-├── MainActivity.kt              # Main entry and navigation
+├── MainActivity.kt              # Entry point & navigation
 ├── data/
-│   ├── models/                  # Data models (Exercise, WorkoutDay, etc.)
-│   ├── repository/              # DataStore operations
+│   ├── models/                  # Data models
+│   │   ├── Exercise.kt
+│   │   ├── WorkoutDay.kt
+│   │   ├── TimerState.kt
+│   │   └── UserPreferences.kt
+│   ├── repository/              # Data layer
+│   │   └── WorkoutRepository.kt
+│   ├── ExerciseBank.kt          # 40+ exercises library
 │   └── DefaultData.kt           # Default workout structure
 ├── ui/
-│   ├── screens/                 # Screen composables and ViewModels
-│   ├── components/              # Reusable UI components
-│   └── theme/                   # Theme, colors, typography
-├── utils/                       # Utility classes (DateUtils, NotificationHelper)
-└── receiver/                    # Broadcast receivers
+│   ├── screens/                 # Screen composables
+│   │   ├── WorkoutScreen.kt
+│   │   ├── OnboardingScreen.kt
+│   │   ├── SettingsScreen.kt
+│   │   └── ExerciseCatalogScreen.kt
+│   ├── components/              # Reusable components
+│   │   ├── ExerciseCard.kt
+│   │   ├── TimerDialog.kt
+│   │   └── DaySelector.kt
+│   └── theme/                   # Material 3 theme
+├── service/
+│   └── TimerService.kt          # Foreground timer service
+└── utils/                       # Helpers
+    ├── DateUtils.kt
+    └── NotificationHelper.kt
 ```
-
-## 🎨 Design
-
-- **Material 3** design system
-- **Professional color schemes** for both light and dark themes
-- **Smooth animations** and transitions
-- **Responsive** layout for all screen sizes
-- **RTL support** for Hebrew language
-- **Accessible** with clear labels and good contrast
 
 ## 🔧 Technology Stack
 
-- **Kotlin** - Modern programming language
-- **Jetpack Compose** - Modern UI toolkit
-- **Material 3** - Latest Material Design
-- **DataStore** - Data persistence
-- **Kotlinx Serialization** - JSON serialization
-- **Navigation Compose** - Navigation between screens
-- **Coroutines** - Asynchronous programming
-- **ViewModel** - State management
+- **Kotlin** - 100% Kotlin codebase
+- **Jetpack Compose** - Modern declarative UI
+- **Material 3** - Latest Material Design components
+- **DataStore** - Type-safe data persistence
+- **Kotlinx Serialization** - Efficient JSON serialization
+- **Navigation Compose** - Type-safe navigation
+- **Coroutines & Flow** - Asynchronous & reactive programming
+- **ViewModel** - MVVM architecture pattern
+- **Foreground Service** - Reliable background timer
 - **AlarmManager** - Scheduled notifications
 
 ## 📦 Dependencies
 
 ```kotlin
-// Compose & Material 3
+// Compose BOM
 implementation(platform("androidx.compose:compose-bom:2024.05.00"))
 implementation("androidx.compose.material3:material3")
 implementation("androidx.compose.material:material-icons-extended")
@@ -115,197 +141,94 @@ implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.0")
 implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.0")
 ```
 
-## 🏋️ Default Workout Structure
-
-### Sunday - Chest & Shoulders
-- Dumbbell Chest Press (5 sets, 10-12 reps, 60s rest)
-- Cable Chest Press (4 sets, 12-15 reps, 45s rest)
-- Machine Flyes (4 sets, 15-20 reps, 45s rest)
-- Dumbbell Shoulder Press (4 sets, 10-12 reps, 60s rest)
-- Lateral Raises (4 sets, 15-20 reps, 45s rest)
-
-### Monday - Cardio
-- HIIT Training (1 set, 30 min)
-
-### Tuesday - Legs
-- Squats (5 sets, 10-12 reps, 60s rest)
-- Cossack Squats (4 sets, 10 each leg, 45s rest)
-- Walking Lunges (4 sets, 12 steps each, 45s rest)
-- Leg Curls (4 sets, 15-20 reps, 45s rest)
-- Step Ups (4 sets, 15 each leg, 45s rest)
-
-### Wednesday - Cardio
-- Low HR Running (1 set, 30-40 min)
-
-### Thursday - Back & Arms
-- Wide Lat Pulldown (5 sets, 10-12 reps, 60s rest)
-- Seated Cable Row (4 sets, 12-15 reps, 45s rest)
-- Cable Pullover (4 sets, 15-20 reps, 45s rest)
-- Dumbbell Curls (4 sets, 12-15 reps, 45s rest)
-- Cable Tricep Extension (4 sets, 15-20 reps, 45s rest)
-
 ## 🚀 User Flow
 
-1. App opens → Today's workout displayed automatically
-2. User selects exercise → Performs set
-3. Timer starts automatically after clicking "Start Rest"
-4. User rests → Completes set → Clicks "Next Set"
-5. Timer resets for next set
-6. All sets completed → Exercise auto-marked complete ✓
-7. User moves to next exercise
-8. Finishes workout → Feels accomplished! 💪
+### First Launch - Onboarding
+1. Welcome screen with feature overview
+2. Notification permission request
+3. Choose setup option:
+   - Use default program OR
+   - Build custom workout plan OR
+   - Skip and add exercises later
+4. Ready to train! 💪
 
-## ⚙️ Settings
+### Daily Workout
+1. App opens → Today's workout displayed
+2. Tap day selector to change days
+3. Select exercise → Input weight
+4. Complete set → Tap "Start Rest"
+5. Timer runs → Rest period countdown
+6. Tap "Next Set" or wait for auto-complete
+7. Repeat until all sets done → Exercise marked complete ✓
+8. Move to next exercise
+9. Finish workout → Feel accomplished! 🎉
 
-- **Language Selection** - Hebrew, English, or System Default
-- **Theme Selection** - Light, Dark, or System Default
-- **Notifications** - Enable/disable workout reminders
-- **Auto Reset** - Optional automatic weekly reset on Sundays
-- **Manual Reset** - Button to manually reset weekly progress
-- **Enabled Days** - Customize which days appear in workout list
+### Modifying Your Plan
+1. Open Settings
+2. Tap "Manage workout days and exercises"
+3. Select which days to train
+4. For each day:
+   - Set workout title
+   - Add exercises from catalog
+   - Remove unwanted exercises
+5. Save → Plan updated instantly
 
-## 🔔 Notifications
+## 🎨 Design Highlights
 
-### Channels
-1. **Workout Reminders** - High priority, alarm sound for scheduled workouts
-2. **Timer Alerts** - High priority for rest timer completion
-3. **Weekly Updates** - Default priority for weekly reset notifications
-
-### Permissions
-- `POST_NOTIFICATIONS` - Display notifications
-- `SCHEDULE_EXACT_ALARM` - Schedule precise workout reminders
-- `VIBRATE` - Vibrate on timer completion
-- `WAKE_LOCK` - Keep timer running in background
-
-## 💾 Data Persistence
-
-All data is stored using DataStore Preferences with JSON serialization:
-
-- **Workout Progress** - Completed exercises, sets, weights, notes
-- **User Preferences** - Language, theme, notifications, enabled days
-- **Workout Structure** - Custom workout days and exercises
-- **Timer State** - Current timer state (persists across app restarts)
-
-### Weekly Reset Behavior
-- **Clears:** Completion marks, completed sets
-- **Preserves:** Exercise weights, notes, custom exercises
-
-## 🎯 Key Features Implementation
-
-### Timer Logic
-```kotlin
-1. User clicks "Start Rest"
-2. Load existing completedSets from WorkoutProgress
-3. Create TimerState with currentSet = completedSets + 1
-4. Show timer dialog and save state to DataStore
-5. On "Next Set" or timer completion:
-   - Increment completedSets
-   - Save to WorkoutProgress
-   - Auto-complete exercise if all sets done
-6. On close (X button):
-   - Save completedSets to WorkoutProgress
-   - Clear TimerState from DataStore
-```
-
-### State Management
-- **ViewModel** handles all business logic
-- **Repository** manages DataStore operations
-- **Flows** provide reactive state updates
-- **Coroutines** handle async operations
-
-## 📱 Screens
-
-### 1. Workout Screen
-- Day selector (horizontal tabs)
-- Exercise list with cards
-- Set progress indicators
-- Weight input fields
-- Timer button per exercise
-- Completion checkboxes
-
-### 2. Settings Screen
-- Language selection dialog
-- Theme selection dialog
-- Notification toggles
-- Auto-reset toggle
-- Manual reset button with confirmation
-
-### 3. Timer Dialog
-- Large circular timer display
-- Exercise name
-- Set progress dots (completed=green, current=blue, pending=gray)
-- Set counter badge
-- Close button (X)
-- "Next Set" and "Stop" buttons
+- **Material 3** design system
+- **Adaptive theming** - Beautiful light and dark modes
+- **Smooth animations** and transitions
+- **Responsive layouts** for all screen sizes
+- **Full RTL support** for Hebrew
+- **Accessible** with proper contrast and labels
+- **Clean typography** with clear hierarchy
+- **Intuitive interactions** with visual feedback
 
 ## 🌐 Internationalization
 
 ### Supported Languages
-- **Hebrew (עברית)** - Default, full RTL support
-- **English** - Full translation
-- **System Default** - Uses device language
+- 🇮🇱 **Hebrew (עברית)** - Full RTL support, native interface
+- 🇺🇸 **English** - Complete translation
+- 🌍 **System Default** - Follows device language
 
-### String Resources
-- All UI text is localized
-- Exercise names translated
-- Day names localized
-- Messages and notifications translated
+### Fully Localized
+- All UI text and labels
+- Exercise names and categories
+- Day names and abbreviations
+- Notification messages
+- Error messages and dialogs
 
-## 🎨 Themes
+## 💾 Data Persistence
 
-### Light Theme
-- Primary: Blue (#2563EB)
-- Success: Green (#059669)
-- Background: Light Gray (#F9FAFB)
-- Surface: White (#FFFFFF)
-- Text: Dark Gray (#1F2937)
+### What's Saved
+- ✅ Workout progress (completed sets, exercises)
+- ✅ Exercise weights and notes
+- ✅ Custom workout structure
+- ✅ User preferences (theme, language, enabled days)
+- ✅ Timer state (survives app restart)
 
-### Dark Theme
-- Primary: Light Blue (#3B82F6)
-- Success: Light Green (#10B981)
-- Background: Very Dark Gray (#0F172A)
-- Surface: Dark Gray (#1E293B)
-- Text: Light Gray (#F1F5F9)
+### Weekly Reset
+- **Clears**: Completion marks, set progress
+- **Preserves**: Weights, notes, custom exercises, workout structure
 
-## 🧪 Testing
+## 📱 Permissions
 
-### Manual Testing Checklist
-- ✅ App launches without errors
-- ✅ All 5 workout days load correctly
-- ✅ Timer saves and restores sets properly
-- ✅ Exercise auto-completes when all sets done
-- ✅ Weekly reset works (manual button)
-- ✅ Both themes look great
-- ✅ Hebrew and English both work with proper RTL
-- ✅ Notifications send at right times
-- ✅ No data loss on app close
-- ✅ Timer persists across app restart
+```xml
+<!-- Required -->
+<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+<uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+<uses-permission android:name="android.permission.VIBRATE" />
+<uses-permission android:name="android.permission.WAKE_LOCK" />
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+```
 
-### Edge Cases Handled
-1. Mid-workout app exit → Sets saved immediately
-2. Timer during phone call → State persists
-3. Bathroom break mid-set → Progress saved
-4. All sets completed → Auto-mark complete
-5. Weekly reset → Confirmation dialog, preserve weights
-6. No exercises for a day → Friendly rest day message
-7. Language change → UI updates immediately
-8. Theme change → Immediate update without restart
-
-## 🚀 Building the App
+## 🔨 Building the App
 
 ### Requirements
-- Android Studio Hedgehog or newer
-- Kotlin 1.9.22 or newer
-- Android SDK 33+
-- Gradle 8.0+
-
-### Build Steps
-```bash
-1. Clone the repository
-2. Open in Android Studio
-3. Sync Gradle
-4. Run on device or emulator (API 33+)
-```
+- Android Studio Hedgehog (2023.1.1) or newer
+- Kotlin 1.9.22+
+- Android SDK 33+ (Android 13+)
+- Gradle 8.2+
 
 ### Build Commands
 ```bash
@@ -315,45 +238,163 @@ All data is stored using DataStore Preferences with JSON serialization:
 # Release build
 ./gradlew assembleRelease
 
-# Install on connected device
+# Install on device
 ./gradlew installDebug
+
+# Run tests
+./gradlew test
 ```
 
-## 📝 Future Enhancements (Nice-to-Have)
+### Build Steps
+1. Clone repository: `git clone https://github.com/HananelSabag/Workout-Tracker.git`
+2. Open in Android Studio
+3. Sync Gradle dependencies
+4. Run on device or emulator (API 33+)
 
-- 📊 Statistics dashboard with charts
-- 🏆 Achievement system for milestones
-- 📈 Weight progression graphs
-- 📝 Exercise notes with history
-- 🔊 Sound effects for timer completion
-- 📸 Exercise images/videos
-- ☁️ Cloud backup (Firebase/Google Drive)
-- 👥 Social features (share workouts)
-- 🔔 Smart reminders based on patterns
+## 🎯 Default Workout Program
+
+### Sunday - Chest & Shoulders
+- Dumbbell Chest Press (5×10-12, 60s rest)
+- Cable Chest Press (4×12-15, 45s rest)
+- Machine Flyes (4×15-20, 45s rest)
+- Dumbbell Shoulder Press (4×10-12, 60s rest)
+- Lateral Raises (4×15-20, 45s rest)
+
+### Monday - Cardio
+- HIIT Training (1×30min)
+
+### Tuesday - Legs
+- Squats (5×10-12, 60s rest)
+- Cossack Squats (4×10 each, 45s rest)
+- Walking Lunges (4×12 steps, 45s rest)
+- Leg Curls (4×15-20, 45s rest)
+- Step Ups (4×15 each, 45s rest)
+
+### Wednesday - Cardio
+- Low HR Running (1×30-40min)
+
+### Thursday - Back & Arms
+- Wide Lat Pulldown (5×10-12, 60s rest)
+- Seated Cable Row (4×12-15, 45s rest)
+- Cable Pullover (4×15-20, 45s rest)
+- Dumbbell Curls (4×12-15, 45s rest)
+- Cable Tricep Extension (4×15-20, 45s rest)
+
+*All days and exercises are fully customizable!*
+
+## 🧪 Quality Assurance
+
+### Manual Testing Checklist
+- ✅ Onboarding flow completion
+- ✅ Workout builder day selection
+- ✅ Exercise addition from catalog
+- ✅ Custom exercise creation
+- ✅ Timer functionality (start/pause/resume/stop)
+- ✅ Timer persistence across app restart
+- ✅ Set tracking and auto-completion
+- ✅ Weight input and persistence
+- ✅ Weekly reset (manual and automatic)
+- ✅ Theme switching (light/dark/system)
+- ✅ Language switching (Hebrew/English)
+- ✅ Notification delivery
+- ✅ Background timer operation
+- ✅ Settings modifications
+
+### Edge Cases Handled
+- Mid-workout app closure → Progress saved
+- Phone call during timer → Timer continues
+- Battery optimization → Foreground service exemption
+- Low memory → State persisted to disk
+- Network unavailable → Fully offline capable
+- Screen rotation → State preserved
+- Language change → UI updates immediately
+- Theme change → Smooth transition
+
+## 📈 Version History
+
+### v2.1 (December 2025) - Complete Overhaul
+- ✨ **NEW**: Dynamic Workout Builder with day selection
+- ✨ **NEW**: Workout title customization per day
+- ✨ **NEW**: Access builder from Settings
+- ✨ **NEW**: Enhanced onboarding (2 pages, 3 options)
+- ✨ **NEW**: Complete exercise catalog with filters
+- ✨ **NEW**: All 7 days enabled by default
+- 🐛 **FIX**: Timer dialog auto-reopen issue
+- 🐛 **FIX**: Exercise catalog limited to 10 items
+- 🐛 **FIX**: Swipe navigation in onboarding
+- 🎨 **UI**: Removed blue backgrounds, cleaner design
+- 🎨 **UI**: Compact day selector (3-letter abbreviations)
+
+### v2.0 (December 2025)
+- Exercise Bank System
+- Enhanced Rest Timer with notifications
+- Onboarding Experience
+- Auto-open current day toggle
+- Data preservation on updates
+
+### v1.0 (November 2025)
+- Initial release
+- Core workout tracking
+- Timer functionality
+- Weekly reset
+- Bilingual support
+
+## 🔮 Future Enhancements
+
+### Planned Features
+- 📊 Progress charts and statistics
+- 📈 Weight progression tracking
+- 🏆 Achievement system
+- 📸 Exercise demonstration videos
+- 📝 Workout notes and history
+- ☁️ Cloud backup (optional)
+- 🔔 Smart reminder suggestions
+- 👥 Workout sharing (optional)
+
+### Under Consideration
+- 🎵 Rest timer music integration
+- 📱 Wear OS companion app
+- 🤝 Social features
+- 🎯 Workout templates marketplace
+- 🧠 AI workout suggestions
 
 ## 👨‍💻 Developer
 
-**Created by:** Hananel Sabag  
-**Project:** Workout Tracker v2.0  
-**Date:** December 2025  
-**Architecture:** Clean Architecture with MVVM  
-**UI Framework:** Jetpack Compose  
+**Hananel Sabag**  
+Fitness Enthusiast & Android Developer
 
-### Version History
-- **v2.0** (December 2025) - Exercise Bank, Enhanced Timer, Onboarding
-- **v1.0** (November 2025) - Initial release with core features  
+### Contact
+- GitHub: [@HananelSabag](https://github.com/HananelSabag)
+- Project: [Workout Tracker](https://github.com/HananelSabag/Workout-Tracker)
+
+### Development Stats
+- **Lines of Code**: 6,000+
+- **Development Time**: 2 months
+- **Architecture**: Clean Architecture + MVVM
+- **UI Framework**: Jetpack Compose
+- **Languages**: Kotlin 100%
 
 ## 📄 License
 
-This project is built as a personal workout tracking solution.
+This project is a personal workout tracking solution built with modern Android development best practices.
 
 ## 🙏 Acknowledgments
 
-- Material Design 3 for the beautiful design system
-- Jetpack Compose team for the modern UI toolkit
-- Android developer community for best practices and patterns
+- **Material Design 3** - Beautiful, accessible design system
+- **Jetpack Compose** - Modern, declarative UI toolkit
+- **Android Community** - Countless resources and best practices
+- **Fitness Community** - Inspiration and workout knowledge
 
 ---
 
-**Built with ❤️ and 💪 for fitness enthusiasts**
+## 💪 Built for Athletes, by an Athlete
 
+Whether you're a beginner starting your fitness journey or an experienced athlete tracking advanced programs, Workout Tracker adapts to your needs with complete flexibility and a beautiful interface.
+
+**No ads. No subscriptions. No data collection. Just your workouts, your way.**
+
+---
+
+**Made with ❤️ and 💪 for fitness enthusiasts worldwide**
+
+*Version 2.1 - December 2025*
