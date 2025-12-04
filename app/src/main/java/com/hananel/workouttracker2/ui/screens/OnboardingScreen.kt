@@ -446,9 +446,11 @@ private fun OnboardingPage2(
 internal fun WorkoutBuilderScreen(
     onFinish: (List<WorkoutDay>) -> Unit,
     onBack: () -> Unit,
+    loadExistingData: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val repository = remember { WorkoutRepository(context) }
     
     // Step 1: Select which days to include
     var showDaySelection by remember { mutableStateOf(true) }
@@ -459,9 +461,22 @@ internal fun WorkoutBuilderScreen(
         mutableStateListOf<WorkoutDay>()
     }
     
-    // Initialize workout days when selection is confirmed
+    // Load existing data or initialize empty
+    LaunchedEffect(Unit) {
+        if (loadExistingData) {
+            // Load existing workout structure
+            val existingDays = repository.getWorkoutStructure()
+            if (existingDays.isNotEmpty()) {
+                workoutDays.addAll(existingDays)
+                selectedDayIndices = existingDays.map { it.dayIndex }.toSet()
+                showDaySelection = false // Skip day selection, go directly to editing
+            }
+        }
+    }
+    
+    // Initialize workout days when selection is confirmed (only for new setup)
     LaunchedEffect(showDaySelection) {
-        if (!showDaySelection && workoutDays.isEmpty()) {
+        if (!showDaySelection && workoutDays.isEmpty() && !loadExistingData) {
             val allDays = listOf(
                 R.string.day_sunday to 0,
                 R.string.day_monday to 1,

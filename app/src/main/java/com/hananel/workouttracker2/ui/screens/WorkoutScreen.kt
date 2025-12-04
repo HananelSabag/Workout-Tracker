@@ -41,6 +41,7 @@ fun WorkoutScreen(
     onNavigateToAlarms: () -> Unit,
     onNavigateToCatalog: (String) -> Unit,
     onResetWeekly: () -> Unit,
+    shouldOpenTimerDialog: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -65,10 +66,27 @@ fun WorkoutScreen(
     var showResetDialog by remember { mutableStateOf(false) }
     var showAddExerciseMenu by remember { mutableStateOf(false) }
     var showCreateExerciseDialog by remember { mutableStateOf(false) }
-    var showTimerDialog by remember { mutableStateOf(false) } // Only show when user clicks banner
+    var showTimerDialog by remember { mutableStateOf(false) }
     
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    
+    // Auto-open timer dialog when timer starts
+    LaunchedEffect(timerState) {
+        val currentTimerState = timerState
+        if (currentTimerState != null && currentTimerState.isRunning) {
+            showTimerDialog = true
+        } else if (currentTimerState == null) {
+            showTimerDialog = false
+        }
+    }
+    
+    // Open timer dialog when coming from notification
+    LaunchedEffect(shouldOpenTimerDialog, timerState) {
+        if (shouldOpenTimerDialog && timerState != null) {
+            showTimerDialog = true
+        }
+    }
     
     Scaffold(
         topBar = {
@@ -236,7 +254,17 @@ fun WorkoutScreen(
                                 viewModel.updateExerciseWeight(exercise.id, newWeight)
                             },
                             onStartRest = {
-                                viewModel.startTimer(exercise, context)
+                                // Prevent starting new timer if one is already running
+                                if (timerState == null) {
+                                    viewModel.startTimer(exercise, context)
+                                } else {
+                                    scope.launch {
+                                        snackbarHostState.showSnackbar(
+                                            message = context.getString(R.string.timer_already_running),
+                                            duration = SnackbarDuration.Short
+                                        )
+                                    }
+                                }
                             },
                             onToggleComplete = {
                                 viewModel.toggleExerciseCompletion(exercise.id)
@@ -318,13 +346,6 @@ fun WorkoutScreen(
             )
         }
         
-        // Reset showTimerDialog when timer state becomes null (timer stopped)
-        LaunchedEffect(timerState) {
-            if (timerState == null) {
-                showTimerDialog = false
-            }
-            // Don't auto-open dialog when timer is running - only when user clicks banner
-        }
         
         // Add Exercise Menu
         if (showAddExerciseMenu) {

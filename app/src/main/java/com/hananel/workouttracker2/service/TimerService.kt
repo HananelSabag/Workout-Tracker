@@ -289,9 +289,10 @@ class TimerService : Service() {
     }
     
     private fun createTimerNotification(timeLeft: Int, exerciseName: String, currentSet: Int, totalSets: Int): Notification {
-        // Intent to open app
+        // Intent to open app and show timer dialog
         val openAppIntent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            putExtra("OPEN_TIMER_DIALOG", true)
         }
         val openAppPendingIntent = PendingIntent.getActivity(
             this, 0, openAppIntent,

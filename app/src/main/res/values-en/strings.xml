@@ -257,6 +257,7 @@
     <!-- Timer Notification Actions -->
     <string name="paused">Paused</string>
     <string name="remaining">remaining</string>
+    <string name="timer_already_running">A timer is already running! Stop it before starting a new one</string>
     
     <!-- Onboarding -->
     <string name="onboarding_welcome">Welcome to Workout Tracker!</string>

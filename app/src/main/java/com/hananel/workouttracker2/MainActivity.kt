@@ -52,8 +52,15 @@ class MainActivity : ComponentActivity() {
         }
     }
     
+    // State to signal when notification wants to open timer dialog
+    private val _shouldOpenTimerDialog = mutableStateOf(false)
+    val shouldOpenTimerDialog: State<Boolean> = _shouldOpenTimerDialog
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Check if we should open timer dialog from notification
+        _shouldOpenTimerDialog.value = intent?.getBooleanExtra("OPEN_TIMER_DIALOG", false) ?: false
         
         // Create notification channels
         NotificationHelper(this).createNotificationChannels()
@@ -64,8 +71,14 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         
         setContent {
-            WorkoutTrackerApp()
+            WorkoutTrackerApp(shouldOpenTimerDialog = shouldOpenTimerDialog.value)
         }
+    }
+    
+    override fun onNewIntent(newIntent: android.content.Intent) {
+        super.onNewIntent(newIntent)
+        // Handle new intent when app is already running
+        _shouldOpenTimerDialog.value = newIntent.getBooleanExtra("OPEN_TIMER_DIALOG", false)
     }
     
     private fun requestNecessaryPermissions() {
@@ -111,7 +124,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun WorkoutTrackerApp() {
+fun WorkoutTrackerApp(shouldOpenTimerDialog: Boolean = false) {
     val context = LocalContext.current
     val repository = remember { WorkoutRepository(context) }
     val scope = rememberCoroutineScope()
@@ -136,13 +149,13 @@ fun WorkoutTrackerApp() {
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
         ) {
-            AppNavigation()
+            AppNavigation(shouldOpenTimerDialog = shouldOpenTimerDialog)
         }
     }
 }
 
 @Composable
-fun AppNavigation() {
+fun AppNavigation(shouldOpenTimerDialog: Boolean = false) {
     val navController = rememberNavController()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -202,7 +215,8 @@ fun AppNavigation() {
                     scope.launch {
                         repository.resetWeeklyProgress()
                     }
-                }
+                },
+                shouldOpenTimerDialog = shouldOpenTimerDialog
             )
         }
         

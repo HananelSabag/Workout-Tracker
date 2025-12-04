@@ -56,7 +56,8 @@ fun SettingsScreen(
                     showWorkoutBuilder = false
                 }
             },
-            onBack = { showWorkoutBuilder = false }
+            onBack = { showWorkoutBuilder = false },
+            loadExistingData = true // Load existing workout structure from Settings
         )
         return
     }
