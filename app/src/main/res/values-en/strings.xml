@@ -163,5 +163,79 @@
     <string name="general">General</string>
     <string name="auto_open_current_day">Auto-open current day</string>
     <string name="auto_open_current_day_desc">When opening the app, jump to today\'s workout</string>
+    
+    <!-- Muscle Groups -->
+    <string name="muscle_chest">Chest</string>
+    <string name="muscle_back">Back</string>
+    <string name="muscle_shoulders">Shoulders</string>
+    <string name="muscle_arms">Arms</string>
+    <string name="muscle_legs">Legs</string>
+    <string name="muscle_core">Core</string>
+    <string name="muscle_cardio">Cardio</string>
+    
+    <!-- Exercise Bank - Chest -->
+    <string name="exercise_chest_dumbbell_press">Dumbbell Chest Press</string>
+    <string name="exercise_chest_barbell_press">Barbell Bench Press</string>
+    <string name="exercise_chest_cable_press">Cable Chest Press</string>
+    <string name="exercise_chest_flyes">Machine Flyes</string>
+    <string name="exercise_chest_dumbbell_flyes">Dumbbell Flyes</string>
+    <string name="exercise_chest_pushups">Push-ups</string>
+    
+    <!-- Exercise Bank - Back -->
+    <string name="exercise_back_lat_pulldown">Wide Lat Pulldown</string>
+    <string name="exercise_back_cable_row">Seated Cable Row</string>
+    <string name="exercise_back_cable_pullover">Cable Pullover</string>
+    <string name="exercise_back_deadlift">Deadlift</string>
+    <string name="exercise_back_pullups">Pull-ups</string>
+    <string name="exercise_back_dumbbell_row">Dumbbell Row</string>
+    
+    <!-- Exercise Bank - Shoulders -->
+    <string name="exercise_shoulders_dumbbell_press">Dumbbell Shoulder Press</string>
+    <string name="exercise_shoulders_barbell_press">Barbell Shoulder Press</string>
+    <string name="exercise_shoulders_lateral_raise">Lateral Raises</string>
+    <string name="exercise_shoulders_front_raise">Front Raises</string>
+    <string name="exercise_shoulders_rear_delt_flyes">Rear Delt Flyes</string>
+    
+    <!-- Exercise Bank - Arms -->
+    <string name="exercise_arms_dumbbell_curl">Dumbbell Curls</string>
+    <string name="exercise_arms_barbell_curl">Barbell Curls</string>
+    <string name="exercise_arms_hammer_curl">Hammer Curls</string>
+    <string name="exercise_arms_cable_tricep_extension">Cable Tricep Extension</string>
+    <string name="exercise_arms_dumbbell_tricep_extension">Dumbbell Tricep Extension</string>
+    <string name="exercise_arms_dips">Dips</string>
+    
+    <!-- Exercise Bank - Legs -->
+    <string name="exercise_legs_squats">Squats</string>
+    <string name="exercise_legs_front_squats">Front Squats</string>
+    <string name="exercise_legs_leg_press">Leg Press</string>
+    <string name="exercise_legs_leg_curl">Leg Curls</string>
+    <string name="exercise_legs_leg_extension">Leg Extension</string>
+    <string name="exercise_legs_lunges">Walking Lunges</string>
+    <string name="exercise_legs_cossack_squat">Cossack Squats</string>
+    <string name="exercise_legs_step_ups">Step Ups</string>
+    <string name="exercise_legs_calf_raise">Calf Raises</string>
+    
+    <!-- Exercise Bank - Core -->
+    <string name="exercise_core_plank">Plank</string>
+    <string name="exercise_core_crunches">Crunches</string>
+    <string name="exercise_core_russian_twist">Russian Twist</string>
+    <string name="exercise_core_leg_raises">Leg Raises</string>
+    
+    <!-- Exercise Bank - Cardio -->
+    <string name="exercise_cardio_hiit">HIIT Training</string>
+    <string name="exercise_cardio_running">Running</string>
+    <string name="exercise_cardio_cycling">Cycling</string>
+    <string name="exercise_cardio_rowing">Rowing</string>
+    <string name="exercise_cardio_elliptical">Elliptical</string>
+    
+    <!-- Exercise Catalog UI -->
+    <string name="exercise_catalog">Exercise Catalog</string>
+    <string name="choose_from_catalog">Choose from Catalog</string>
+    <string name="choose_from_catalog_desc">Select from 40+ pre-made exercises</string>
+    <string name="create_new_exercise">Create New Exercise</string>
+    <string name="create_new_exercise_desc">Enter custom exercise details</string>
+    <string name="add_to_workout">Add to Workout</string>
+    <string name="filter_by_muscle">Filter by Muscle</string>
+    <string name="all_exercises">All Exercises</string>
 </resources>
 

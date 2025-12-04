@@ -163,4 +163,78 @@
     <string name="general">כללי</string>
     <string name="auto_open_current_day">פתח אוטומטית ליום הנוכחי</string>
     <string name="auto_open_current_day_desc">בפתיחת האפליקציה, עבור לאימון של היום</string>
+    
+    <!-- Muscle Groups -->
+    <string name="muscle_chest">חזה</string>
+    <string name="muscle_back">גב</string>
+    <string name="muscle_shoulders">כתפיים</string>
+    <string name="muscle_arms">ידיים</string>
+    <string name="muscle_legs">רגליים</string>
+    <string name="muscle_core">ליבה</string>
+    <string name="muscle_cardio">אירובי</string>
+    
+    <!-- Exercise Bank - Chest -->
+    <string name="exercise_chest_dumbbell_press">לחיצת חזה דמבלס</string>
+    <string name="exercise_chest_barbell_press">לחיצת חזה ברבל</string>
+    <string name="exercise_chest_cable_press">לחיצת חזה בכבל</string>
+    <string name="exercise_chest_flyes">פרפר במכונה</string>
+    <string name="exercise_chest_dumbbell_flyes">פרפר דמבלס</string>
+    <string name="exercise_chest_pushups">שכיבות סמיכה</string>
+    
+    <!-- Exercise Bank - Back -->
+    <string name="exercise_back_lat_pulldown">משיכה בפולי עליון רחב</string>
+    <string name="exercise_back_cable_row">חתירה בפולי נמוך</string>
+    <string name="exercise_back_cable_pullover">פולאובר בכבל</string>
+    <string name="exercise_back_deadlift">דדליפט</string>
+    <string name="exercise_back_pullups">מתקני סטים</string>
+    <string name="exercise_back_dumbbell_row">חתירה דמבלס</string>
+    
+    <!-- Exercise Bank - Shoulders -->
+    <string name="exercise_shoulders_dumbbell_press">לחיצת כתפיים דמבלס</string>
+    <string name="exercise_shoulders_barbell_press">לחיצת כתפיים ברבל</string>
+    <string name="exercise_shoulders_lateral_raise">הרחקת כתפיים צידית</string>
+    <string name="exercise_shoulders_front_raise">הרחקת כתפיים קדמית</string>
+    <string name="exercise_shoulders_rear_delt_flyes">פרפר אחורי</string>
+    
+    <!-- Exercise Bank - Arms -->
+    <string name="exercise_arms_dumbbell_curl">כפיפת מרפקים עם דמבלס</string>
+    <string name="exercise_arms_barbell_curl">כפיפת מרפקים עם ברבל</string>
+    <string name="exercise_arms_hammer_curl">פטיש</string>
+    <string name="exercise_arms_cable_tricep_extension">יישור מרפקים בכבל</string>
+    <string name="exercise_arms_dumbbell_tricep_extension">יישור מרפקים עם דמבלס</string>
+    <string name="exercise_arms_dips">שכיבות טריצפס</string>
+    
+    <!-- Exercise Bank - Legs -->
+    <string name="exercise_legs_squats">סקוואט</string>
+    <string name="exercise_legs_front_squats">סקוואט קדמי</string>
+    <string name="exercise_legs_leg_press">כבישת רגליים</string>
+    <string name="exercise_legs_leg_curl">כפיפת רגליים</string>
+    <string name="exercise_legs_leg_extension">יישור רגליים</string>
+    <string name="exercise_legs_lunges">לאנג\'ס</string>
+    <string name="exercise_legs_cossack_squat">קוזאק סקוואט</string>
+    <string name="exercise_legs_step_ups">עליות על במה</string>
+    <string name="exercise_legs_calf_raise">הרמת עקבים</string>
+    
+    <!-- Exercise Bank - Core -->
+    <string name="exercise_core_plank">פלאנק</string>
+    <string name="exercise_core_crunches">כפיפות בטן</string>
+    <string name="exercise_core_russian_twist">טוויסט רוסי</string>
+    <string name="exercise_core_leg_raises">הרמת רגליים</string>
+    
+    <!-- Exercise Bank - Cardio -->
+    <string name="exercise_cardio_hiit">HIIT</string>
+    <string name="exercise_cardio_running">ריצה</string>
+    <string name="exercise_cardio_cycling">אופניים</string>
+    <string name="exercise_cardio_rowing">חתירה</string>
+    <string name="exercise_cardio_elliptical">אליפטי</string>
+    
+    <!-- Exercise Catalog UI -->
+    <string name="exercise_catalog">קטלוג תרגילים</string>
+    <string name="choose_from_catalog">בחר מהקטלוג</string>
+    <string name="choose_from_catalog_desc">בחר תרגיל מתוך 40+ תרגילים מוכנים</string>
+    <string name="create_new_exercise">צור תרגיל חדש</string>
+    <string name="create_new_exercise_desc">הזן פרטי תרגיל מותאם אישית</string>
+    <string name="add_to_workout">הוסף לאימון</string>
+    <string name="filter_by_muscle">סנן לפי שריר</string>
+    <string name="all_exercises">כל התרגילים</string>
 </resources>
