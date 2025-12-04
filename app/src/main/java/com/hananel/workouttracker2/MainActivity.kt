@@ -11,10 +11,13 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
@@ -25,6 +28,7 @@ import androidx.navigation.compose.rememberNavController
 import com.hananel.workouttracker2.data.models.ThemeMode
 import com.hananel.workouttracker2.data.repository.WorkoutRepository
 import com.hananel.workouttracker2.ui.screens.AlarmsScreen
+import com.hananel.workouttracker2.ui.screens.OnboardingScreen
 import com.hananel.workouttracker2.ui.screens.SettingsScreen
 import com.hananel.workouttracker2.ui.screens.WorkoutScreen
 import com.hananel.workouttracker2.ui.screens.WorkoutViewModel
@@ -142,11 +146,41 @@ fun AppNavigation() {
     val navController = rememberNavController()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val repository = remember { WorkoutRepository(context) }
+    
+    var hasCompletedOnboarding by remember { mutableStateOf<Boolean?>(null) }
+    
+    LaunchedEffect(Unit) {
+        val prefs = repository.getUserPreferences()
+        hasCompletedOnboarding = prefs.hasCompletedOnboarding
+    }
+    
+    if (hasCompletedOnboarding == null) {
+        // Loading state
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        return
+    }
     
     NavHost(
         navController = navController,
-        startDestination = "workout"
+        startDestination = if (hasCompletedOnboarding == true) "workout" else "onboarding"
     ) {
+        composable("onboarding") {
+            OnboardingScreen(
+                onComplete = {
+                    scope.launch {
+                        val prefs = repository.getUserPreferences()
+                        repository.saveUserPreferences(prefs.copy(hasCompletedOnboarding = true))
+                        hasCompletedOnboarding = true
+                        navController.navigate("workout") {
+                            popUpTo("onboarding") { inclusive = true }
+                        }
+                    }
+                }
+            )
+        }
         composable("workout") {
             val viewModel: WorkoutViewModel = remember {
                 WorkoutViewModelFactory(context).create()

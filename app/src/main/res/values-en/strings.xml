@@ -249,5 +249,14 @@
     <!-- Timer Notification Actions -->
     <string name="paused">Paused</string>
     <string name="remaining">remaining</string>
+    
+    <!-- Onboarding -->
+    <string name="onboarding_welcome">Welcome to Workout Tracker!</string>
+    <string name="onboarding_description">Track your workouts, manage sets and weights, and use the smart rest timer</string>
+    <string name="onboarding_feature_1">Weekly workout tracking</string>
+    <string name="onboarding_feature_2">Rest timer with set tracking</string>
+    <string name="onboarding_feature_3">40+ pre-made exercises</string>
+    <string name="onboarding_feature_4">Hebrew and English support</string>
+    <string name="get_started">Let\'s Get Started!</string>
 </resources>
 

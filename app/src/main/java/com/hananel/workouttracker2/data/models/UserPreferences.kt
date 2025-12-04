@@ -15,7 +15,8 @@ data class UserPreferences(
     val autoResetWeekly: Boolean = false, // Default: manual only
     val enabledDays: List<Int> = listOf(0, 1, 2, 3, 4), // Sun-Thu default
     val autoOpenCurrentDay: Boolean = true, // Default: enabled (current behavior)
-    val lastViewedDayIndex: Int = 0 // Persist last viewed day
+    val lastViewedDayIndex: Int = 0, // Persist last viewed day
+    val hasCompletedOnboarding: Boolean = false // First launch detection
 ) {
     fun getThemeMode(): ThemeMode {
         return try {

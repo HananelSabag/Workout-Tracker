@@ -249,4 +249,13 @@
     <!-- Timer Notification Actions -->
     <string name="paused">מושהה</string>
     <string name="remaining">נותרו</string>
+    
+    <!-- Onboarding -->
+    <string name="onboarding_welcome">ברוכים הבאים למעקב אימונים!</string>
+    <string name="onboarding_description">עקוב אחר האימונים שלך, נהל סטים ומשקלים, והשתמש בטיימר מנוחה חכם</string>
+    <string name="onboarding_feature_1">מעקב אחר אימונים שבועיים</string>
+    <string name="onboarding_feature_2">טיימר מנוחה עם מעקב סטים</string>
+    <string name="onboarding_feature_3">40+ תרגילים מוכנים מראש</string>
+    <string name="onboarding_feature_4">תמיכה בעברית ואנגלית</string>
+    <string name="get_started">בואו נתחיל!</string>
 </resources>
