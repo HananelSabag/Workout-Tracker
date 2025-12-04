@@ -304,4 +304,8 @@
     <string name="workout_builder">בונה אימונים</string>
     <string name="start_from_empty">התחל מרשימה ריקה</string>
     <string name="start_from_empty_desc">תוסיף תרגילים ידנית בהמשך</string>
+    <string name="remove_day_warning_title">הסרת יום עם תרגילים</string>
+    <string name="remove_day_warning_message">שים לב! ביום זה יש תרגילים שיימחקו:</string>
+    <string name="day_has_exercises">%1$s - %2$d תרגילים</string>
+    <string name="remove_day_confirm">הסר את היום</string>
 </resources>

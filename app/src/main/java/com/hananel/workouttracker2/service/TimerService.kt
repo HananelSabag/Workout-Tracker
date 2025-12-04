@@ -213,18 +213,39 @@ class TimerService : Service() {
     }
     
     private fun onTimerComplete() {
-        // Show completion notification
-        showCompletionNotification()
-        
-        // Keep state but mark as not running
-        currentTimerState = currentTimerState?.copy(timeLeft = 0, isRunning = false)
-        serviceScope.launch {
-            repository?.saveTimerState(currentTimerState)
+        currentTimerState?.let { state ->
+            // Check if this was the last set
+            val isLastSet = state.currentSet >= state.totalSets
+            
+            if (isLastSet) {
+                // Last set complete - stop everything
+                showAllSetsCompleteNotification(state.exerciseName)
+                
+                serviceScope.launch {
+                    // Mark exercise as fully completed
+                    repository?.updateExerciseCompletedSets(
+                        state.exerciseId,
+                        state.totalSets,
+                        state.totalSets
+                    )
+                }
+                
+                // Stop service and clear state
+                stopTimerAndCleanup()
+            } else {
+                // Not last set - show completion notification
+                showCompletionNotification()
+                
+                // Keep state but mark as not running
+                currentTimerState = state.copy(timeLeft = 0, isRunning = false)
+                serviceScope.launch {
+                    repository?.saveTimerState(currentTimerState)
+                }
+                
+                // Update notification to show completion
+                updateNotification(0, state.exerciseName, state.currentSet, state.totalSets)
+            }
         }
-        
-        // Update notification to show completion
-        updateNotification(0, currentTimerState?.exerciseName ?: "", 
-            currentTimerState?.currentSet ?: 1, currentTimerState?.totalSets ?: 4)
     }
     
     private fun handleNextSet() {

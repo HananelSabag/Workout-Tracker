@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -461,22 +462,29 @@ internal fun WorkoutBuilderScreen(
         mutableStateListOf<WorkoutDay>()
     }
     
-    // Load existing data or initialize empty
+    // Store existing days for reference (before user changes)
+    val existingDaysMap = remember { mutableStateMapOf<Int, WorkoutDay>() }
+    
+    // Load existing data
     LaunchedEffect(Unit) {
         if (loadExistingData) {
             // Load existing workout structure
             val existingDays = repository.getWorkoutStructure()
             if (existingDays.isNotEmpty()) {
-                workoutDays.addAll(existingDays)
+                // Store existing days in map for later reference
+                existingDays.forEach { day ->
+                    existingDaysMap[day.dayIndex] = day
+                }
+                // Pre-select the existing days
                 selectedDayIndices = existingDays.map { it.dayIndex }.toSet()
-                showDaySelection = false // Skip day selection, go directly to editing
+                // Still show day selection so user can remove days
             }
         }
     }
     
-    // Initialize workout days when selection is confirmed (only for new setup)
+    // Initialize workout days when selection is confirmed
     LaunchedEffect(showDaySelection) {
-        if (!showDaySelection && workoutDays.isEmpty() && !loadExistingData) {
+        if (!showDaySelection && workoutDays.isEmpty()) {
             val allDays = listOf(
                 R.string.day_sunday to 0,
                 R.string.day_monday to 1,
@@ -490,7 +498,8 @@ internal fun WorkoutBuilderScreen(
             workoutDays.addAll(
                 allDays.filter { (_, index) -> selectedDayIndices.contains(index) }
                     .map { (nameResId, dayIndex) ->
-                        WorkoutDay(
+                        // Use existing day if available, otherwise create empty
+                        existingDaysMap[dayIndex] ?: WorkoutDay(
                             id = "day_$dayIndex",
                             nameResId = nameResId,
                             dayIndex = dayIndex,
@@ -510,6 +519,7 @@ internal fun WorkoutBuilderScreen(
         // Day Selection Screen
         DaySelectionScreen(
             selectedDays = selectedDayIndices,
+            existingDaysMap = existingDaysMap,
             onDayToggle = { dayIndex ->
                 selectedDayIndices = if (selectedDayIndices.contains(dayIndex)) {
                     selectedDayIndices - dayIndex
@@ -529,7 +539,7 @@ internal fun WorkoutBuilderScreen(
                 title = { Text(stringResource(R.string.workout_builder)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back))
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 }
             )
@@ -890,6 +900,7 @@ private fun ExerciseSelectionDialog(
 @Composable
 internal fun DaySelectionScreen(
     selectedDays: Set<Int>,
+    existingDaysMap: Map<Int, WorkoutDay> = emptyMap(),
     onDayToggle: (Int) -> Unit,
     onContinue: () -> Unit,
     onBack: () -> Unit,
@@ -906,13 +917,17 @@ internal fun DaySelectionScreen(
         R.string.day_saturday
     )
     
+    // Warning dialog state
+    var showWarningDialog by remember { mutableStateOf(false) }
+    var pendingDayToRemove by remember { mutableStateOf<Int?>(null) }
+    
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.select_days_for_week)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back))
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 }
             )
@@ -959,10 +974,21 @@ internal fun DaySelectionScreen(
             // Day selection cards
             dayNames.forEachIndexed { index, nameResId ->
                 val isSelected = selectedDays.contains(index)
+                val existingDay = existingDaysMap[index]
+                val hasExercises = existingDay != null && existingDay.exercises.isNotEmpty()
                 
                 ElevatedCard(
                     modifier = Modifier.fillMaxWidth(),
-                    onClick = { onDayToggle(index) },
+                    onClick = {
+                        // If unselecting a day with exercises, show warning
+                        if (isSelected && hasExercises) {
+                            pendingDayToRemove = index
+                            showWarningDialog = true
+                        } else {
+                            // Otherwise just toggle
+                            onDayToggle(index)
+                        }
+                    },
                     elevation = CardDefaults.elevatedCardElevation(
                         defaultElevation = if (isSelected) 6.dp else 2.dp
                     )
@@ -996,6 +1022,58 @@ internal fun DaySelectionScreen(
                     }
                 }
             }
+        }
+        
+        // Warning dialog when removing day with exercises
+        if (showWarningDialog && pendingDayToRemove != null) {
+            AlertDialog(
+                onDismissRequest = {
+                    showWarningDialog = false
+                    pendingDayToRemove = null
+                },
+                title = {
+                    Text(stringResource(R.string.remove_day_warning_title))
+                },
+                text = {
+                    Column {
+                        Text(stringResource(R.string.remove_day_warning_message))
+                        Spacer(modifier = Modifier.height(8.dp))
+                        val dayName = context.getString(dayNames[pendingDayToRemove!!])
+                        val exerciseCount = existingDaysMap[pendingDayToRemove!!]?.exercises?.size ?: 0
+                        Text(
+                            text = stringResource(R.string.day_has_exercises, dayName, exerciseCount),
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            pendingDayToRemove?.let { dayIndex ->
+                                onDayToggle(dayIndex)
+                            }
+                            showWarningDialog = false
+                            pendingDayToRemove = null
+                        }
+                    ) {
+                        Text(
+                            stringResource(R.string.remove_day_confirm),
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = {
+                            showWarningDialog = false
+                            pendingDayToRemove = null
+                        }
+                    ) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                }
+            )
         }
     }
 }

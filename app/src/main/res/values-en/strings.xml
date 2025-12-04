@@ -304,5 +304,9 @@
     <string name="workout_builder">Workout Builder</string>
     <string name="start_from_empty">Start from Empty</string>
     <string name="start_from_empty_desc">You\'ll add exercises manually later</string>
+    <string name="remove_day_warning_title">Removing Day with Exercises</string>
+    <string name="remove_day_warning_message">Warning! This day has exercises that will be deleted:</string>
+    <string name="day_has_exercises">%1$s - %2$d exercises</string>
+    <string name="remove_day_confirm">Remove Day</string>
 </resources>
 
