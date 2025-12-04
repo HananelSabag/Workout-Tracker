@@ -1,3 +1,15 @@
+# Internal documentation and work files
+BUILD_SUMMARY.md
+FILES_LIST.md
+FINAL_BUGFIXES_SUMMARY.md
+FINAL_STATUS.md
+LATEST_UPDATES.md
+START_HERE.md
+TESTING_CHECKLIST.md
+TIMER_UPGRADE_SUMMARY.md
+UPDATE_SUMMARY.md
+סיכום_הפרויקט.md
+
 # Built application files
 *.apk
 *.ap_
