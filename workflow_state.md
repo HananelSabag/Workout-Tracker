@@ -1613,6 +1613,198 @@ Settings (Help button clicked)
 
 ---
 
+## Session 11: Final Polish - Timer Banner Auto-Close, Day Removal, Deprecation Fixes (Dec 4, 2025 - 19:00)
+
+### Issues Identified:
+1. **Timer banner stays visible after all sets complete** - Orange banner shows "5/5 sets" with 0:00 time
+2. **Can't remove days from existing workout** - Day selection screen skipped when editing
+3. **Build deprecation warnings** - Multiple deprecated icons and components
+
+### Changes Made:
+
+#### 1. Auto-Close Timer Banner on Last Set
+**File: `TimerService.kt`**
+
+**Problem:**
+- When completing the last set (e.g., 5/5), timer runs to 0:00
+- Orange banner stays visible showing "5/5 • 0:00"
+- User has to manually stop timer - confusing UX
+
+**Solution:**
+- Enhanced `onTimerComplete()` to check if current set is the last set
+- If last set: Auto-stop service and clear timer state immediately
+- If not last set: Show completion notification (existing behavior)
+
+**Code Changes:**
+```kotlin
+private fun onTimerComplete() {
+    currentTimerState?.let { state ->
+        val isLastSet = state.currentSet >= state.totalSets
+        
+        if (isLastSet) {
+            // Last set complete - stop everything
+            showAllSetsCompleteNotification(state.exerciseName)
+            repository?.updateExerciseCompletedSets(...)
+            stopTimerAndCleanup()  // Removes banner!
+        } else {
+            // Not last set - show completion notification
+            showCompletionNotification()
+            // Keep state for "Next Set" button
+        }
+    }
+}
+```
+
+**Result:**
+- Timer completes last set → Banner disappears automatically ✅
+- User sees "All sets completed!" notification
+- Clean, professional UX
+
+#### 2. Enable Day Removal in Workout Builder
+**File: `OnboardingScreen.kt`**
+
+**Problem:**
+- When accessing Workout Builder from Settings to remove Friday/Saturday
+- Day selection screen was skipped entirely
+- No way to remove days from existing structure
+
+**Solution:**
+- Changed logic: Always show day selection screen
+- Load existing days into `existingDaysMap` for reference
+- Pre-select existing days, but allow user to toggle them
+- When user removes day with exercises → Show warning dialog
+
+**Warning Dialog Features:**
+- Shows day name: "שישי" / "Friday"
+- Shows exercise count: "5 תרגילים" / "5 exercises"
+- Red error color for emphasis
+- Confirm button: "הסר את היום" / "Remove Day"
+- Cancel button to abort
+
+**Code Changes:**
+```kotlin
+// Store existing days for reference
+val existingDaysMap = remember { mutableStateMapOf<Int, WorkoutDay>() }
+
+// Always show day selection (removed the skip logic)
+LaunchedEffect(Unit) {
+    if (loadExistingData) {
+        val existingDays = repository.getWorkoutStructure()
+        existingDays.forEach { day ->
+            existingDaysMap[day.dayIndex] = day
+        }
+        selectedDayIndices = existingDays.map { it.dayIndex }.toSet()
+        // DON'T skip day selection anymore
+    }
+}
+
+// In DaySelectionScreen - check if removing day with exercises
+ElevatedCard(
+    onClick = {
+        if (isSelected && hasExercises) {
+            showWarningDialog = true  // Warn before removing
+        } else {
+            onDayToggle(index)  // Toggle freely
+        }
+    }
+)
+```
+
+**New Strings Added:**
+- `remove_day_warning_title` - "הסרת יום עם תרגילים"
+- `remove_day_warning_message` - "שים לב! ביום זה יש תרגילים שיימחקו:"
+- `day_has_exercises` - "%1$s - %2$d תרגילים"
+- `remove_day_confirm` - "הסר את היום"
+
+**User Flow Now:**
+1. User clicks Help button in Settings
+2. Day selection screen appears with existing days pre-selected
+3. User unchecks Friday (has 5 exercises)
+4. Warning dialog appears: "Friday - 5 exercises"
+5. User confirms → Friday and its exercises removed
+6. Saves → Main screen shows only Sun-Thu
+
+#### 3. Fix All Deprecation Warnings
+**Files Modified:** All UI screens and components
+
+**Changes:**
+- ✅ `Icons.Default.ArrowBack` → `Icons.AutoMirrored.Filled.ArrowBack`
+- ✅ `Icons.Outlined.HelpOutline` → `Icons.AutoMirrored.Outlined.HelpOutline`
+- ✅ `Icons.Default.List` → `Icons.AutoMirrored.Filled.List`
+- ✅ `Divider()` → `HorizontalDivider()`
+
+**Updated Files:**
+- `OnboardingScreen.kt` - ArrowBack
+- `SettingsScreen.kt` - ArrowBack, HelpOutline
+- `ExerciseCatalogScreen.kt` - ArrowBack, Divider
+- `AlarmsScreen.kt` - ArrowBack
+- `AddExerciseMenu.kt` - List
+
+**Import Changes:**
+```kotlin
+// Before:
+import androidx.compose.material.icons.filled.ArrowBack
+
+// After:
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+```
+
+### Build Status:
+**Before:** 8 deprecation warnings
+```
+w: Icons.Filled.ArrowBack is deprecated
+w: Icons.Outlined.HelpOutline is deprecated
+w: Icons.Filled.List is deprecated
+w: Divider() is deprecated
+```
+
+**After:** ✅ BUILD SUCCESSFUL - ZERO WARNINGS!
+```
+BUILD SUCCESSFUL in 4s
+34 actionable tasks: 4 executed, 30 up-to-date
+```
+
+### User Experience Improvements:
+
+**Timer:**
+- Clean automatic closure when workout complete
+- No lingering notifications or banners
+- Professional, polished feel
+
+**Workout Builder:**
+- Full control over day management
+- Safe removal with warnings
+- No accidental data loss
+
+**Code Quality:**
+- Modern API usage (AutoMirrored icons for RTL support)
+- Future-proof (no deprecated APIs)
+- Clean build output
+
+### Git Status:
+**Commit:** `90cf0ab`
+- 9 files changed
+- 139 insertions, 32 deletions
+- Successfully pushed to origin/main
+
+**GitHub:**
+```
+To https://github.com/HananelSabag/Workout-Tracker.git
+   60242cb..90cf0ab  main -> main
+```
+
+### Summary:
+✅ Timer banner auto-closes on completion
+✅ Can remove days from existing workout
+✅ Warning dialog prevents accidental deletion
+✅ Zero deprecation warnings
+✅ Clean, professional build
+✅ All changes committed and pushed
+
+**Application is now production-ready! 🎉🔥**
+
+---
+
 ## Notes
 
 - Maintain existing architecture (Clean Architecture + MVVM)
