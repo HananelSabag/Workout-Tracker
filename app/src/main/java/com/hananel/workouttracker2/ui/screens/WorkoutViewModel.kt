@@ -236,6 +236,43 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
             repository.resetWeeklyProgress()
         }
     }
+    
+    fun addExerciseFromBank(dayId: String, bankItem: com.hananel.workouttracker2.data.models.ExerciseBankItem) {
+        viewModelScope.launch {
+            val currentDays = _workoutDays.value.toMutableList()
+            val dayIndex = currentDays.indexOfFirst { it.id == dayId }
+            
+            if (dayIndex != -1) {
+                val day = currentDays[dayIndex]
+                
+                // Generate unique ID for this exercise instance
+                val newExerciseId = "${bankItem.id}_${System.currentTimeMillis()}"
+                
+                // Create Exercise from BankItem
+                val newExercise = Exercise(
+                    id = newExerciseId,
+                    nameResId = bankItem.nameResId,
+                    sets = bankItem.defaultSets,
+                    reps = bankItem.defaultReps,
+                    restTime = bankItem.defaultRestTime,
+                    hasWeight = bankItem.hasWeight,
+                    muscleGroups = bankItem.muscleGroups,
+                    equipment = bankItem.equipment
+                )
+                
+                // Add exercise to day (append to end, preserving existing exercises)
+                val updatedExercises = day.exercises.toMutableList().apply {
+                    add(newExercise)
+                }
+                
+                currentDays[dayIndex] = day.copy(exercises = updatedExercises)
+                
+                // Save updated structure
+                _workoutDays.value = currentDays
+                repository.saveWorkoutStructure(currentDays)
+            }
+        }
+    }
 }
 
 // Factory for creating ViewModel with repository

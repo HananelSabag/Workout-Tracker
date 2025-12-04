@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hananel.workouttracker2.R
 import com.hananel.workouttracker2.ui.components.AddExerciseDialog
+import com.hananel.workouttracker2.ui.components.AddExerciseMenu
 import com.hananel.workouttracker2.ui.components.DaySelector
 import com.hananel.workouttracker2.ui.components.ExerciseCard
 import com.hananel.workouttracker2.ui.components.TimerDialog
@@ -35,6 +36,7 @@ fun WorkoutScreen(
     viewModel: WorkoutViewModel,
     onNavigateToSettings: () -> Unit,
     onNavigateToAlarms: () -> Unit,
+    onNavigateToCatalog: (String) -> Unit,
     onResetWeekly: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -49,7 +51,8 @@ fun WorkoutScreen(
         workoutDays.find { it.dayIndex == selectedDayIndex }
     }
     var showResetDialog by remember { mutableStateOf(false) }
-    var showAddExerciseDialog by remember { mutableStateOf(false) }
+    var showAddExerciseMenu by remember { mutableStateOf(false) }
+    var showCreateExerciseDialog by remember { mutableStateOf(false) }
     var showTimerDialog by remember { mutableStateOf(true) } // Show dialog when timer is active
     
     val snackbarHostState = remember { SnackbarHostState() }
@@ -97,7 +100,7 @@ fun WorkoutScreen(
         floatingActionButton = {
             if (currentWorkout != null) {
                 FloatingActionButton(
-                    onClick = { showAddExerciseDialog = true }
+                    onClick = { showAddExerciseMenu = true }
                 ) {
                     Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_exercise))
                 }
@@ -297,10 +300,23 @@ fun WorkoutScreen(
             }
         }
         
-        // Add Exercise Dialog
-        if (showAddExerciseDialog) {
+        // Add Exercise Menu
+        if (showAddExerciseMenu) {
+            AddExerciseMenu(
+                onDismiss = { showAddExerciseMenu = false },
+                onCreateNew = { showCreateExerciseDialog = true },
+                onChooseFromCatalog = {
+                    currentWorkout?.let { workout ->
+                        onNavigateToCatalog(workout.id)
+                    }
+                }
+            )
+        }
+        
+        // Create Custom Exercise Dialog
+        if (showCreateExerciseDialog) {
             AddExerciseDialog(
-                onDismiss = { showAddExerciseDialog = false },
+                onDismiss = { showCreateExerciseDialog = false },
                 onAdd = { name, sets, reps, restTime, hasWeight, weight ->
                     scope.launch {
                         snackbarHostState.showSnackbar(
@@ -308,6 +324,7 @@ fun WorkoutScreen(
                             duration = SnackbarDuration.Long
                         )
                     }
+                    showCreateExerciseDialog = false
                 }
             )
         }

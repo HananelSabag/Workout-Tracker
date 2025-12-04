@@ -161,10 +161,31 @@ fun AppNavigation() {
                 onNavigateToAlarms = {
                     navController.navigate("alarms")
                 },
+                onNavigateToCatalog = { dayId ->
+                    navController.navigate("exerciseCatalog/$dayId")
+                },
                 onResetWeekly = {
                     scope.launch {
                         repository.resetWeeklyProgress()
                     }
+                }
+            )
+        }
+        
+        composable("exerciseCatalog/{dayId}") { backStackEntry ->
+            val dayId = backStackEntry.arguments?.getString("dayId") ?: ""
+            val viewModel: WorkoutViewModel = remember {
+                WorkoutViewModelFactory(context).create()
+            }
+            
+            com.hananel.workouttracker2.ui.screens.ExerciseCatalogScreen(
+                dayId = dayId,
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onExerciseSelected = { bankItem ->
+                    viewModel.addExerciseFromBank(dayId, bankItem)
+                    navController.popBackStack()
                 }
             )
         }
