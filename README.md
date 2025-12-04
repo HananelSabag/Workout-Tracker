@@ -6,20 +6,52 @@ A professional, clean, and maintainable Android workout tracking application bui
 
 ### Core Functionality
 - ✅ **Weekly Workout Tracking** - Default Sunday-Thursday schedule (customizable in settings)
+- ✅ **Exercise Bank System** - 40+ pre-made exercises with muscle group categorization
+- ✅ **Exercise Catalog** - Beautiful catalog UI with filtering by muscle groups
 - ✅ **Set-Based Workout System** - Track individual sets per exercise
-- ✅ **Rest Timer** - Automatic countdown timer between sets with set tracking
+- ✅ **Enhanced Rest Timer** - Foreground service with pause/resume controls
+- ✅ **Timer Notifications** - Countdown display with pause/resume/stop actions in notification
 - ✅ **Exercise Completion** - Auto-mark exercises as complete when all sets are done
 - ✅ **Weight Tracking** - Track weight per exercise with persistent history
 - ✅ **Weekly Reset** - Manual button (required), optional automatic with notification
 - ✅ **Bilingual Support** - Hebrew & English with full RTL support for Hebrew
 - ✅ **Theme Support** - Light/Dark/System with beautiful design for both
 - ✅ **Smart Notifications** - Workout reminders with custom times and days
+- ✅ **Onboarding Experience** - Welcome screen for first-time users
+- ✅ **Flexible Day View** - Auto-open current day (optional) or remember last viewed day
 
 ### State Persistence
 - All progress is saved immediately to DataStore
 - Timer state persists across app restarts
 - Completed sets are tracked and restored
 - Weights and notes are preserved across weekly resets
+
+### NEW: Exercise Bank (v2.0)
+- **40+ Pre-Made Exercises** organized by muscle groups:
+  - Chest: 6 exercises (dumbbell, barbell, cable, machine, bodyweight)
+  - Back: 6 exercises (pulldowns, rows, pullups, deadlift)
+  - Shoulders: 5 exercises (presses, raises, rear delts)
+  - Arms: 6 exercises (biceps and triceps variations)
+  - Legs: 9 exercises (squats, lunges, curls, extensions, calves)
+  - Core: 4 exercises (plank, crunches, twists, leg raises)
+  - Cardio: 5 exercises (HIIT, running, cycling, rowing, elliptical)
+- **Smart Filtering** by muscle groups
+- **Beautiful Catalog UI** with Material 3 design
+- **Bilingual Exercise Names** - All exercises named in Hebrew and English
+- **Quick Add** - Add exercises from catalog or create custom ones
+
+### NEW: Enhanced Timer (v2.0)
+- **Countdown in Notification** - See remaining time without opening app
+- **Pause/Resume Controls** - Pause timer from notification (bathroom break, phone call)
+- **3 Notification Actions** - Pause/Resume, Next Set, Stop
+- **Progress Bar** - Visual progress in notification
+- **Foreground Service** - Timer never stops, even during phone calls
+
+### NEW: User Experience (v2.0)
+- **Onboarding Screen** - Welcoming experience for first-time users
+- **Auto-Open Toggle** - Choose to auto-jump to today's workout or stay on last viewed day
+- **Data Preservation** - Updates never overwrite existing workout structure
+- **Upgrade-Safe** - Existing users keep all their exercises, weights, and progress
 
 ## 🏗️ Architecture
 
@@ -302,10 +334,14 @@ All data is stored using DataStore Preferences with JSON serialization:
 ## 👨‍💻 Developer
 
 **Created by:** Hananel Sabag  
-**Project:** Workout Tracker v4.0  
-**Date:** November 2025  
+**Project:** Workout Tracker v2.0  
+**Date:** December 2025  
 **Architecture:** Clean Architecture with MVVM  
 **UI Framework:** Jetpack Compose  
+
+### Version History
+- **v2.0** (December 2025) - Exercise Bank, Enhanced Timer, Onboarding
+- **v1.0** (November 2025) - Initial release with core features  
 
 ## 📄 License
 
