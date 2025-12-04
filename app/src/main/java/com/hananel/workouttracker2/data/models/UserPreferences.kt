@@ -13,7 +13,9 @@ data class UserPreferences(
     val notificationsEnabled: Boolean = true,
     val workoutAlarms: List<WorkoutAlarm> = emptyList(),
     val autoResetWeekly: Boolean = false, // Default: manual only
-    val enabledDays: List<Int> = listOf(0, 1, 2, 3, 4) // Sun-Thu default
+    val enabledDays: List<Int> = listOf(0, 1, 2, 3, 4), // Sun-Thu default
+    val autoOpenCurrentDay: Boolean = true, // Default: enabled (current behavior)
+    val lastViewedDayIndex: Int = 0 // Persist last viewed day
 ) {
     fun getThemeMode(): ThemeMode {
         return try {

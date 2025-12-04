@@ -158,5 +158,10 @@
     <string name="has_weight_question">Exercise with weight?</string>
     <string name="has_weight_hint">Enable if exercise requires weight (dumbbells, barbell, etc.)</string>
     <string name="completed_badge">Completed</string>
+    
+    <!-- General Settings -->
+    <string name="general">General</string>
+    <string name="auto_open_current_day">Auto-open current day</string>
+    <string name="auto_open_current_day_desc">When opening the app, jump to today\'s workout</string>
 </resources>
 

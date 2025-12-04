@@ -26,11 +26,23 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
     private val _timerState = MutableStateFlow<TimerState?>(null)
     val timerState: StateFlow<TimerState?> = _timerState.asStateFlow()
     
-    private val _selectedDayIndex = MutableStateFlow(DateUtils.getCurrentDayIndex())
+    private val _selectedDayIndex = MutableStateFlow(0)
     val selectedDayIndex: StateFlow<Int> = _selectedDayIndex.asStateFlow()
     
     init {
         loadData()
+        setInitialDay()
+    }
+    
+    private fun setInitialDay() {
+        viewModelScope.launch {
+            val prefs = repository.getUserPreferences()
+            _selectedDayIndex.value = if (prefs.autoOpenCurrentDay) {
+                DateUtils.getCurrentDayIndex()
+            } else {
+                prefs.lastViewedDayIndex
+            }
+        }
     }
     
     private fun loadData() {
@@ -65,6 +77,9 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
     
     fun selectDay(dayIndex: Int) {
         _selectedDayIndex.value = dayIndex
+        viewModelScope.launch {
+            repository.updateLastViewedDay(dayIndex)
+        }
     }
     
     fun getCurrentDayWorkout(): WorkoutDay? {

@@ -83,6 +83,16 @@ class WorkoutRepository(private val context: Context) {
         return getUserPreferencesFlow().first()
     }
     
+    suspend fun updateAutoOpenCurrentDay(enabled: Boolean) {
+        val currentPrefs = getUserPreferences()
+        saveUserPreferences(currentPrefs.copy(autoOpenCurrentDay = enabled))
+    }
+    
+    suspend fun updateLastViewedDay(dayIndex: Int) {
+        val currentPrefs = getUserPreferences()
+        saveUserPreferences(currentPrefs.copy(lastViewedDayIndex = dayIndex))
+    }
+    
     // Workout Structure
     suspend fun saveWorkoutStructure(workoutDays: List<WorkoutDay>) {
         context.dataStore.edit { preferences ->

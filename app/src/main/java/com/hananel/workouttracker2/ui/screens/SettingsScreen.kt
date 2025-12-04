@@ -127,6 +127,45 @@ fun SettingsScreen(
                 }
             }
             
+            // General Section
+            item {
+                Text(
+                    text = stringResource(R.string.general),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(vertical = 8.dp, horizontal = 0.dp).padding(top = 16.dp)
+                )
+            }
+            
+            item {
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(text = stringResource(R.string.auto_open_current_day))
+                            Text(
+                                text = stringResource(R.string.auto_open_current_day_desc),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = preferences.autoOpenCurrentDay,
+                            onCheckedChange = { enabled ->
+                                scope.launch {
+                                    repository.updateAutoOpenCurrentDay(enabled)
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+            
             // Notifications Section
             item {
                 Text(

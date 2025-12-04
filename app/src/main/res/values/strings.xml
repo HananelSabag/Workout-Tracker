@@ -158,4 +158,9 @@
     <string name="has_weight_question">תרגיל עם משקל?</string>
     <string name="has_weight_hint">הפעל אם התרגיל דורש משקל (דמבלס, ברבל וכו\')</string>
     <string name="completed_badge">הושלם</string>
+    
+    <!-- General Settings -->
+    <string name="general">כללי</string>
+    <string name="auto_open_current_day">פתח אוטומטית ליום הנוכחי</string>
+    <string name="auto_open_current_day_desc">בפתיחת האפליקציה, עבור לאימון של היום</string>
 </resources>
