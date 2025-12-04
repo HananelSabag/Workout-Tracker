@@ -247,8 +247,6 @@
     <string name="custom_workout_day">Custom Workout Day</string>
     
     <!-- Timer Notification Actions -->
-    <string name="pause">Pause</string>
-    <string name="resume">Resume</string>
     <string name="paused">Paused</string>
     <string name="remaining">remaining</string>
 </resources>

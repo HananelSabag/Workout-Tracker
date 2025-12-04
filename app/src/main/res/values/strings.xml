@@ -247,8 +247,6 @@
     <string name="custom_workout_day">יום אימון מותאם</string>
     
     <!-- Timer Notification Actions -->
-    <string name="pause">השהה</string>
-    <string name="resume">המשך</string>
     <string name="paused">מושהה</string>
     <string name="remaining">נותרו</string>
 </resources>
