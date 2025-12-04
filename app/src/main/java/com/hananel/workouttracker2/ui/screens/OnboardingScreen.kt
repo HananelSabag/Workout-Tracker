@@ -428,9 +428,13 @@ private fun OnboardingPage2(
                 )
             }
             
-            // Skip button at bottom
+            // Skip button at bottom (for existing users who already have data)
             TextButton(
-                onClick = onFinish,
+                onClick = {
+                    // Skip just completes onboarding without setting up anything
+                    // User will see empty state in main screen with "Setup Workout" button
+                    onFinish()
+                },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(

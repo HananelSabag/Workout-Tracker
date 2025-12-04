@@ -308,4 +308,7 @@
     <string name="remove_day_warning_message">שים לב! ביום זה יש תרגילים שיימחקו:</string>
     <string name="day_has_exercises">%1$s - %2$d תרגילים</string>
     <string name="remove_day_confirm">הסר את היום</string>
+    <string name="no_workout_structure">אין תוכנית אימונים</string>
+    <string name="no_workout_structure_message">התחל על ידי הגדרת ימי האימון והתרגילים שלך</string>
+    <string name="setup_workout_plan">הגדר תוכנית אימונים</string>
 </resources>

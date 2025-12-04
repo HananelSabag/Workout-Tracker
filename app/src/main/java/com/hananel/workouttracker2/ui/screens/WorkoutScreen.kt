@@ -7,6 +7,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Notifications
@@ -26,6 +28,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hananel.workouttracker2.R
+import com.hananel.workouttracker2.data.models.getDisplayName
 import com.hananel.workouttracker2.ui.components.AddExerciseDialog
 import com.hananel.workouttracker2.ui.components.AddExerciseMenu
 import com.hananel.workouttracker2.ui.components.DaySelector
@@ -222,14 +225,69 @@ fun WorkoutScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = PaddingValues(bottom = 16.dp)
                 ) {
-                    // Workout name header
+                    // Workout name header with edit button
                     item {
-                        Text(
-                            text = stringResource(currentWorkout.nameResId),
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = currentWorkout.getDisplayName(context),
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.weight(1f)
+                            )
+                            
+                            // Edit button
+                            var showEditDialog by remember { mutableStateOf(false) }
+                            
+                            IconButton(
+                                onClick = { showEditDialog = true },
+                                modifier = Modifier.size(40.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = stringResource(R.string.edit),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            
+                            if (showEditDialog) {
+                                var dayName by remember { mutableStateOf(currentWorkout.customName) }
+                                
+                                AlertDialog(
+                                    onDismissRequest = { showEditDialog = false },
+                                    title = { Text(stringResource(R.string.rename_day)) },
+                                    text = {
+                                        OutlinedTextField(
+                                            value = dayName,
+                                            onValueChange = { dayName = it },
+                                            label = { Text(stringResource(R.string.workout_title)) },
+                                            singleLine = true,
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                    },
+                                    confirmButton = {
+                                        TextButton(
+                                            onClick = {
+                                                viewModel.renameWorkoutDay(currentWorkout.id, dayName)
+                                                showEditDialog = false
+                                            }
+                                        ) {
+                                            Text(stringResource(R.string.save))
+                                        }
+                                    },
+                                    dismissButton = {
+                                        TextButton(onClick = { showEditDialog = false }) {
+                                            Text(stringResource(R.string.cancel))
+                                        }
+                                    }
+                                )
+                            }
+                        }
                     }
                     
                     // Exercises - Using reactive state from workoutProgress
@@ -283,8 +341,62 @@ fun WorkoutScreen(
                         )
                     }
                 }
+            } else if (workoutDays.isEmpty()) {
+                // No workout structure at all - show setup button
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.FitnessCenter,
+                            contentDescription = null,
+                            modifier = Modifier.size(72.dp),
+                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+                        )
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Text(
+                            text = stringResource(R.string.no_workout_structure),
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = stringResource(R.string.no_workout_structure_message),
+                            style = MaterialTheme.typography.bodyLarge,
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(32.dp))
+                        Button(
+                            onClick = onNavigateToSettings,
+                            modifier = Modifier
+                                .fillMaxWidth(0.7f)
+                                .height(56.dp),
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = stringResource(R.string.setup_workout_plan),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
             } else {
-                // Rest day or no exercises
+                // Rest day or no exercises for this day
                 Box(
                     modifier = Modifier
                         .fillMaxSize()

@@ -308,5 +308,8 @@
     <string name="remove_day_warning_message">Warning! This day has exercises that will be deleted:</string>
     <string name="day_has_exercises">%1$s - %2$d exercises</string>
     <string name="remove_day_confirm">Remove Day</string>
+    <string name="no_workout_structure">No Workout Plan</string>
+    <string name="no_workout_structure_message">Get started by setting up your workout days and exercises</string>
+    <string name="setup_workout_plan">Setup Workout Plan</string>
 </resources>
 
