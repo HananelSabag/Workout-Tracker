@@ -237,5 +237,19 @@
     <string name="add_to_workout">Add to Workout</string>
     <string name="filter_by_muscle">Filter by Muscle</string>
     <string name="all_exercises">All Exercises</string>
+    
+    <!-- Manage Workout Days -->
+    <string name="manage_days">Manage Workout Days</string>
+    <string name="rename_day">Rename Day</string>
+    <string name="enter_day_name">Enter workout day name</string>
+    <string name="add_workout_day">Add Workout Day</string>
+    <string name="remove_day">Remove Day</string>
+    <string name="custom_workout_day">Custom Workout Day</string>
+    
+    <!-- Timer Notification Actions -->
+    <string name="pause">Pause</string>
+    <string name="resume">Resume</string>
+    <string name="paused">Paused</string>
+    <string name="remaining">remaining</string>
 </resources>
 

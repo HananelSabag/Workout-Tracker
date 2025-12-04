@@ -21,6 +21,13 @@ class TimerActionReceiver : BroadcastReceiver() {
                 // Handle next set
                 TimerService.nextSet(context)
             }
+            TimerService.ACTION_PAUSE_RESUME -> {
+                // Handle pause/resume
+                val pauseResumeIntent = Intent(context, TimerService::class.java).apply {
+                    action = TimerService.ACTION_PAUSE_RESUME
+                }
+                context.startService(pauseResumeIntent)
+            }
         }
     }
 }

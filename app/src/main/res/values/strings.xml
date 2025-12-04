@@ -237,4 +237,18 @@
     <string name="add_to_workout">הוסף לאימון</string>
     <string name="filter_by_muscle">סנן לפי שריר</string>
     <string name="all_exercises">כל התרגילים</string>
+    
+    <!-- Manage Workout Days -->
+    <string name="manage_days">ניהול ימי אימון</string>
+    <string name="rename_day">שנה שם יום</string>
+    <string name="enter_day_name">הזן שם יום אימון</string>
+    <string name="add_workout_day">הוסף יום אימון</string>
+    <string name="remove_day">הסר יום</string>
+    <string name="custom_workout_day">יום אימון מותאם</string>
+    
+    <!-- Timer Notification Actions -->
+    <string name="pause">השהה</string>
+    <string name="resume">המשך</string>
+    <string name="paused">מושהה</string>
+    <string name="remaining">נותרו</string>
 </resources>

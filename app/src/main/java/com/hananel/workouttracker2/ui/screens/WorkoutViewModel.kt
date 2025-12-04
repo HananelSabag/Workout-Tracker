@@ -273,6 +273,19 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
             }
         }
     }
+    
+    fun renameWorkoutDay(dayId: String, newName: String) {
+        viewModelScope.launch {
+            val currentDays = _workoutDays.value.toMutableList()
+            val index = currentDays.indexOfFirst { it.id == dayId }
+            
+            if (index != -1) {
+                currentDays[index] = currentDays[index].copy(customName = newName)
+                _workoutDays.value = currentDays
+                repository.saveWorkoutStructure(currentDays)
+            }
+        }
+    }
 }
 
 // Factory for creating ViewModel with repository

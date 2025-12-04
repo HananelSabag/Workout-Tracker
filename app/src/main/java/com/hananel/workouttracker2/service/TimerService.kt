@@ -21,12 +21,15 @@ class TimerService : Service() {
     private var repository: WorkoutRepository? = null
     private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var currentTimerState: TimerState? = null
+    private var isPaused = false
+    private var pausedTimeLeft = 0
     
     companion object {
         const val ACTION_START_TIMER = "com.hananel.workouttracker2.START_TIMER"
         const val ACTION_STOP_TIMER = "com.hananel.workouttracker2.STOP_TIMER"
         const val ACTION_NEXT_SET = "com.hananel.workouttracker2.NEXT_SET"
         const val ACTION_SKIP_REST = "com.hananel.workouttracker2.SKIP_REST"
+        const val ACTION_PAUSE_RESUME = "com.hananel.workouttracker2.PAUSE_RESUME"
         
         const val NOTIFICATION_ID = 1003
         const val CHANNEL_ID = "timer_service"
@@ -113,9 +116,44 @@ class TimerService : Service() {
             ACTION_SKIP_REST -> {
                 handleNextSet()
             }
+            ACTION_PAUSE_RESUME -> {
+                handlePauseResume()
+            }
         }
         
         return START_STICKY
+    }
+    
+    private fun handlePauseResume() {
+        if (isPaused) {
+            // Resume: start countdown with paused time
+            isPaused = false
+            currentTimerState?.let { state ->
+                startTimerCountdown(
+                    exerciseName = state.exerciseName,
+                    exerciseId = state.exerciseId,
+                    restTime = pausedTimeLeft,
+                    currentSet = state.currentSet,
+                    totalSets = state.totalSets,
+                    completedSets = state.completedSets
+                )
+            }
+        } else {
+            // Pause: cancel timer and save current time
+            countDownTimer?.cancel()
+            isPaused = true
+            currentTimerState?.let { state ->
+                pausedTimeLeft = state.timeLeft
+                // Update notification to show paused state
+                val notification = createTimerNotification(
+                    pausedTimeLeft,
+                    state.exerciseName,
+                    state.currentSet,
+                    state.totalSets
+                )
+                startForeground(NOTIFICATION_ID, notification)
+            }
+        }
     }
     
     override fun onBind(intent: Intent?): IBinder? = null
@@ -260,12 +298,21 @@ class TimerService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         
+        // Pause/Resume action
+        val pauseResumeIntent = Intent(this, TimerActionReceiver::class.java).apply {
+            action = ACTION_PAUSE_RESUME
+        }
+        val pauseResumePendingIntent = PendingIntent.getBroadcast(
+            this, 1, pauseResumeIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        
         // Skip rest action
         val skipIntent = Intent(this, TimerActionReceiver::class.java).apply {
             action = ACTION_SKIP_REST
         }
         val skipPendingIntent = PendingIntent.getBroadcast(
-            this, 1, skipIntent,
+            this, 2, skipIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         
@@ -274,19 +321,27 @@ class TimerService : Service() {
             action = ACTION_STOP_TIMER
         }
         val stopPendingIntent = PendingIntent.getBroadcast(
-            this, 2, stopIntent,
+            this, 3, stopIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         
+        val timeDisplay = formatTime(timeLeft)
+        val pauseResumeText = if (isPaused) getString(R.string.resume) else getString(R.string.pause)
+        
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle(getString(R.string.rest_timer))
-            .setContentText("$exerciseName - ${getString(R.string.set_of, currentSet, totalSets)}")
-            .setSubText(formatTime(timeLeft))
+            .setContentTitle("$exerciseName • ${getString(R.string.set_of, currentSet, totalSets)}")
+            .setContentText("${if (isPaused) getString(R.string.paused) + " • " else ""}$timeDisplay ${getString(R.string.remaining)}")
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentIntent(openAppPendingIntent)
             .setOngoing(true)
             .setSilent(true)
             .setOnlyAlertOnce(true)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .addAction(
+                R.drawable.ic_launcher_foreground,
+                pauseResumeText,
+                pauseResumePendingIntent
+            )
             .addAction(
                 R.drawable.ic_launcher_foreground,
                 getString(R.string.next_set),
