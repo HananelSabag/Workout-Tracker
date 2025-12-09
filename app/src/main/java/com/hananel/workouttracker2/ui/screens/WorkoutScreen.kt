@@ -366,9 +366,10 @@ fun WorkoutScreen(
                         // For completed sets: if timer is running for THIS exercise, use timer state
                         // This ensures UI is in sync with service state
                         val completedSets = remember(workoutProgress, timerState) {
-                            if (timerState?.exerciseId == exercise.id) {
+                            val currentTimerState = timerState
+                            if (currentTimerState?.exerciseId == exercise.id) {
                                 // Timer is running for this exercise - use timer's completed sets
-                                timerState.completedSets
+                                currentTimerState.completedSets
                             } else {
                                 // No timer or different exercise - use progress data
                                 workoutProgress?.exerciseCompletedSets?.get(exercise.id) ?: 0
