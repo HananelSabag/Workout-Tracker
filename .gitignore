@@ -8,7 +8,11 @@ START_HERE.md
 TESTING_CHECKLIST.md
 TIMER_UPGRADE_SUMMARY.md
 UPDATE_SUMMARY.md
+workflow_state.md
 סיכום_הפרויקט.md
+
+# Nested project copy
+Workout-Tracker/
 
 # Built application files
 *.apk
