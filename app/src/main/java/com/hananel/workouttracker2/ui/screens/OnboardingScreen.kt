@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -20,6 +21,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -170,18 +172,19 @@ private fun OnboardingPage1(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Logo with styled background
+                // Logo with white background
                 Surface(
-                    shape = MaterialTheme.shapes.large,
-                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
-                    modifier = Modifier.size(80.dp)
+                    shape = RoundedCornerShape(16.dp),
+                    color = Color.White,
+                    shadowElevation = 4.dp,
+                    modifier = Modifier.size(90.dp)
                 ) {
                     Image(
                         painter = painterResource(R.drawable.workout_logo),
                         contentDescription = null,
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(12.dp)
+                            .padding(8.dp)
                     )
                 }
                 
@@ -481,9 +484,31 @@ private fun OnboardingPage2(
             // Skip button at bottom (for existing users who already have data)
             TextButton(
                 onClick = {
-                    // Skip just completes onboarding without setting up anything
-                    // User will see empty state in main screen with "Setup Workout" button
-                    onFinish()
+                    // Skip just completes onboarding
+                    // First, clear any potentially corrupted data from cloud backup restore
+                    scope.launch {
+                        // Check if there's valid data (existing user) or corrupted data (cloud restore)
+                        val existingStructure = repository.getWorkoutStructure()
+                        if (existingStructure.isNotEmpty()) {
+                            // Validate the data - check if first exercise nameResId is valid
+                            val firstExercise = existingStructure.firstOrNull()?.exercises?.firstOrNull()
+                            if (firstExercise != null) {
+                                try {
+                                    // Try to get the string - if it fails or returns wrong type of string, clear
+                                    val name = context.getString(firstExercise.nameResId)
+                                    // Check if it's an exercise name (should start with uppercase letter and not contain formatting)
+                                    if (name.contains("%") || name.length < 3) {
+                                        // Corrupted data - clear it
+                                        repository.saveWorkoutStructure(emptyList())
+                                    }
+                                } catch (e: Exception) {
+                                    // Invalid resource ID - clear the data
+                                    repository.saveWorkoutStructure(emptyList())
+                                }
+                            }
+                        }
+                        onFinish()
+                    }
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {

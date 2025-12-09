@@ -1,9 +1,10 @@
 package com.hananel.workouttracker2.ui.screens
 
 import android.content.Context
+import android.content.res.Resources
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.hananel.workouttracker2.data.DefaultData
+import com.hananel.workouttracker2.R
 import com.hananel.workouttracker2.data.models.Exercise
 import com.hananel.workouttracker2.data.models.TimerState
 import com.hananel.workouttracker2.data.models.WorkoutDay
@@ -15,7 +16,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() {
+class WorkoutViewModel(
+    private val repository: WorkoutRepository,
+    private val resources: Resources? = null
+) : ViewModel() {
     
     private val _workoutDays = MutableStateFlow<List<WorkoutDay>>(emptyList())
     val workoutDays: StateFlow<List<WorkoutDay>> = _workoutDays.asStateFlow()
@@ -32,6 +36,30 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
     init {
         loadData()
         setInitialDay()
+    }
+    
+    /**
+     * Validates workout data integrity.
+     * Returns true if data is valid, false if corrupted (should be cleared).
+     */
+    private fun isWorkoutDataValid(workoutDays: List<WorkoutDay>): Boolean {
+        if (workoutDays.isEmpty()) return true // Empty is valid
+        
+        val res = resources ?: return true // Can't validate without resources
+        
+        // Check first exercise nameResId to verify data integrity
+        val firstExercise = workoutDays.firstOrNull()?.exercises?.firstOrNull() ?: return true
+        
+        return try {
+            val name = res.getString(firstExercise.nameResId)
+            // Valid exercise names should NOT contain format placeholders
+            // and should be reasonable length
+            !name.contains("%") && name.length >= 3 && name.length < 100
+        } catch (e: Resources.NotFoundException) {
+            false // Invalid resource ID
+        } catch (e: Exception) {
+            false
+        }
     }
     
     private fun setInitialDay() {
@@ -53,7 +81,14 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
             // Load saved workout structure - do NOT auto-create default data
             // If empty, the UI will show the empty state with "Setup Workout" button
             repository.getWorkoutStructureFlow().collect { savedStructure ->
-                _workoutDays.value = savedStructure // Empty list is valid - shows empty state
+                // Validate data integrity (can be corrupted by cloud backup restore with shifted R values)
+                if (isWorkoutDataValid(savedStructure)) {
+                    _workoutDays.value = savedStructure
+                } else {
+                    // Data is corrupted - clear it and show empty state
+                    repository.saveWorkoutStructure(emptyList())
+                    _workoutDays.value = emptyList()
+                }
             }
         }
         
@@ -308,7 +343,7 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
 class WorkoutViewModelFactory(private val context: Context) {
     fun create(): WorkoutViewModel {
         val repository = WorkoutRepository(context)
-        return WorkoutViewModel(repository)
+        return WorkoutViewModel(repository, context.resources)
     }
 }
 

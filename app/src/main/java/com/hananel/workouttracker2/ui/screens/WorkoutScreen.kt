@@ -71,32 +71,32 @@ fun WorkoutScreen(
     var showAddExerciseMenu by remember { mutableStateOf(false) }
     var showCreateExerciseDialog by remember { mutableStateOf(false) }
     var showTimerDialog by remember { mutableStateOf(false) }
+    // Track if user manually closed the dialog to prevent auto-reopening
+    var userClosedDialog by remember { mutableStateOf(false) }
     
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     
-    // Auto-open timer dialog when timer starts or state changes
-    LaunchedEffect(timerState) {
+    // Auto-open timer dialog ONLY when a NEW timer starts (not on every state change)
+    LaunchedEffect(timerState?.exerciseId, timerState?.currentSet) {
         val currentTimerState = timerState
         when {
             currentTimerState == null -> {
-                // Timer cleared - close dialog
+                // Timer cleared - close dialog and reset flag
                 showTimerDialog = false
+                userClosedDialog = false
             }
-            currentTimerState.isRunning -> {
-                // Timer is running - show dialog
+            currentTimerState.isRunning && !userClosedDialog -> {
+                // Timer is running and user didn't close it - show dialog
                 showTimerDialog = true
-            }
-            !currentTimerState.isRunning && currentTimerState.timeLeft == 0 -> {
-                // Timer paused at 0 (rest complete) - keep dialog open if it was open
-                // This allows user to click "Next Set" without dialog closing
             }
         }
     }
     
     // Open timer dialog when coming from notification
-    LaunchedEffect(shouldOpenTimerDialog, timerState) {
+    LaunchedEffect(shouldOpenTimerDialog) {
         if (shouldOpenTimerDialog && timerState != null) {
+            userClosedDialog = false
             showTimerDialog = true
         }
     }
@@ -109,10 +109,11 @@ fun WorkoutScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        // Logo with subtle background
+                        // Logo with white background
                         Surface(
                             shape = RoundedCornerShape(10.dp),
-                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                            color = Color.White,
+                            shadowElevation = 2.dp,
                             modifier = Modifier.size(40.dp)
                         ) {
                             Image(
@@ -120,7 +121,7 @@ fun WorkoutScreen(
                                 contentDescription = null,
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .padding(6.dp)
+                                    .padding(4.dp)
                             )
                         }
                         Column {
@@ -507,11 +508,13 @@ fun WorkoutScreen(
                 onStop = {
                     // Stop immediately
                     viewModel.stopTimer(context)
+                    userClosedDialog = true
                     showTimerDialog = false
                 },
                 onClose = {
                     // Close dialog but keep timer running - don't stop the service
                     // The timer indicator banner will still show
+                    userClosedDialog = true
                     showTimerDialog = false
                 },
                 onTimerTick = { timeLeft ->
