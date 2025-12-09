@@ -66,6 +66,8 @@
     <string name="all_sets_completed">All sets completed!</string>
     <string name="rest_complete_start_set">Time to start set %1$d!</string>
     <string name="completed_all_sets">All sets completed successfully!</string>
+    <string name="rest_complete">Rest Complete!</string>
+    <string name="tap_for_next_set">Tap for next set</string>
     
     <!-- Main Screen -->
     <string name="workout">Workout</string>

@@ -66,6 +66,8 @@
     <string name="all_sets_completed">כל הסטים הושלמו!</string>
     <string name="rest_complete_start_set">זמן להתחיל סט %1$d!</string>
     <string name="completed_all_sets">כל הסטים הושלמו בהצלחה!</string>
+    <string name="rest_complete">מנוחה הסתיימה!</string>
+    <string name="tap_for_next_set">לחץ להתחלת הסט הבא</string>
     
     <!-- Main Screen -->
     <string name="workout">אימון</string>

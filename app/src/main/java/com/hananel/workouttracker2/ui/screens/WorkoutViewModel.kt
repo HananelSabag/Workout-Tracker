@@ -50,16 +50,10 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
     
     private fun loadData() {
         viewModelScope.launch {
-            // Try to load saved workout structure first, fallback to default
+            // Load saved workout structure - do NOT auto-create default data
+            // If empty, the UI will show the empty state with "Setup Workout" button
             repository.getWorkoutStructureFlow().collect { savedStructure ->
-                _workoutDays.value = if (savedStructure.isNotEmpty()) {
-                    savedStructure
-                } else {
-                    // First time - load default and save it
-                    val defaultStructure = DefaultData.getDefaultWorkoutStructure()
-                    repository.saveWorkoutStructure(defaultStructure)
-                    defaultStructure
-                }
+                _workoutDays.value = savedStructure // Empty list is valid - shows empty state
             }
         }
         

@@ -125,19 +125,31 @@ private fun OnboardingPage1(
         )
     }
     
+    var hasRequestedPermission by remember { mutableStateOf(false) }
+    
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         notificationPermissionGranted = isGranted
+        hasRequestedPermission = true
     }
     
-    // Recheck permission status when screen appears
+    // Auto-request permission when screen appears (once)
     LaunchedEffect(Unit) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            notificationPermissionGranted = ContextCompat.checkSelfPermission(
+            val currentStatus = ContextCompat.checkSelfPermission(
                 context,
                 Manifest.permission.POST_NOTIFICATIONS
             ) == PackageManager.PERMISSION_GRANTED
+            
+            notificationPermissionGranted = currentStatus
+            
+            // Auto-request if not granted and not yet requested
+            if (!currentStatus && !hasRequestedPermission) {
+                // Small delay to let the UI settle before showing dialog
+                kotlinx.coroutines.delay(500)
+                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
         }
     }
     
@@ -153,31 +165,39 @@ private fun OnboardingPage1(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Header - Logo and Title in same row
-            Row(
+            // Header - Logo centered with nice container
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Image(
-                    painter = painterResource(R.drawable.workout_logo),
-                    contentDescription = null,
-                    modifier = Modifier.size(56.dp)
-                )
-                Spacer(modifier = Modifier.width(16.dp))
-                Column {
-                    Text(
-                        text = stringResource(R.string.app_name),
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                    Text(
-                        text = stringResource(R.string.onboarding_page1_subtitle),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                // Logo with styled background
+                Surface(
+                    shape = MaterialTheme.shapes.large,
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                    modifier = Modifier.size(80.dp)
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.workout_logo),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(12.dp)
                     )
                 }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Text(
+                    text = stringResource(R.string.app_name),
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Text(
+                    text = stringResource(R.string.onboarding_page1_subtitle),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
             
             Spacer(modifier = Modifier.height(8.dp))
@@ -198,44 +218,74 @@ private fun OnboardingPage1(
             
             Spacer(modifier = Modifier.height(8.dp))
             
-            // Notification Permission - Compact version
-            if (notificationPermissionGranted) {
+            // Notification Permission - With status feedback
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (notificationPermissionGranted) {
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                    } else {
+                        MaterialTheme.colorScheme.surfaceVariant
+                    }
+                )
+            ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = stringResource(R.string.notifications_granted),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-            } else {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        OutlinedButton(
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Notifications,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                            tint = if (notificationPermissionGranted) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            }
+                        )
+                        Column {
+                            Text(
+                                text = stringResource(R.string.enable_notifications_title),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = if (notificationPermissionGranted) {
+                                    stringResource(R.string.notifications_granted)
+                                } else {
+                                    stringResource(R.string.enable_notifications_desc)
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (notificationPermissionGranted) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                }
+                            )
+                        }
+                    }
+                    
+                    if (notificationPermissionGranted) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        TextButton(
                             onClick = {
                                 permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                            },
-                            modifier = Modifier.fillMaxWidth()
+                            }
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Notifications,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
                             Text(stringResource(R.string.allow_notifications))
                         }
                     }
@@ -980,6 +1030,7 @@ internal fun DaySelectionScreen(
                 val isSelected = selectedDays.contains(index)
                 val existingDay = existingDaysMap[index]
                 val hasExercises = existingDay != null && existingDay.exercises.isNotEmpty()
+                val exerciseCount = existingDay?.exercises?.size ?: 0
                 
                 ElevatedCard(
                     modifier = Modifier.fillMaxWidth(),
@@ -995,32 +1046,77 @@ internal fun DaySelectionScreen(
                     },
                     elevation = CardDefaults.elevatedCardElevation(
                         defaultElevation = if (isSelected) 6.dp else 2.dp
+                    ),
+                    colors = CardDefaults.elevatedCardColors(
+                        containerColor = if (isSelected) {
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                        } else {
+                            MaterialTheme.colorScheme.surface
+                        }
                     )
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(20.dp),
+                            .padding(16.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = context.getString(nameResId),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                            color = if (isSelected) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.onSurface
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            // Checkbox-style indicator
+                            Surface(
+                                shape = MaterialTheme.shapes.small,
+                                color = if (isSelected) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.surfaceVariant
+                                },
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onPrimary,
+                                        modifier = Modifier.padding(4.dp)
+                                    )
+                                }
                             }
-                        )
+                            
+                            Column {
+                                Text(
+                                    text = context.getString(nameResId),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isSelected) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurface
+                                    }
+                                )
+                                
+                                // Show exercise count if day has exercises
+                                if (hasExercises) {
+                                    Text(
+                                        text = "$exerciseCount ${context.getString(R.string.add_exercise).lowercase()}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
                         
-                        if (isSelected) {
+                        // Show warning icon if day has exercises and is selected
+                        if (isSelected && hasExercises) {
                             Icon(
-                                imageVector = Icons.Default.Check,
+                                imageVector = Icons.Default.Edit,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(24.dp)
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     }

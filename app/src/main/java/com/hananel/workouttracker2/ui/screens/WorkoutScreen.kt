@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Settings
@@ -74,13 +75,22 @@ fun WorkoutScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     
-    // Auto-open timer dialog when timer starts
+    // Auto-open timer dialog when timer starts or state changes
     LaunchedEffect(timerState) {
         val currentTimerState = timerState
-        if (currentTimerState != null && currentTimerState.isRunning) {
-            showTimerDialog = true
-        } else if (currentTimerState == null) {
-            showTimerDialog = false
+        when {
+            currentTimerState == null -> {
+                // Timer cleared - close dialog
+                showTimerDialog = false
+            }
+            currentTimerState.isRunning -> {
+                // Timer is running - show dialog
+                showTimerDialog = true
+            }
+            !currentTimerState.isRunning && currentTimerState.timeLeft == 0 -> {
+                // Timer paused at 0 (rest complete) - keep dialog open if it was open
+                // This allows user to click "Next Set" without dialog closing
+            }
         }
     }
     
@@ -97,44 +107,82 @@ fun WorkoutScreen(
                 title = { 
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Image(
-                            painter = painterResource(R.drawable.workout_logo),
-                            contentDescription = null,
-                            modifier = Modifier.size(32.dp)
-                        )
-                        Text(
-                            stringResource(R.string.app_name),
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = 22.sp
-                        )
+                        // Logo with subtle background
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Image(
+                                painter = painterResource(R.drawable.workout_logo),
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(6.dp)
+                            )
+                        }
+                        Column {
+                            Text(
+                                stringResource(R.string.app_name),
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp
+                            )
+                        }
                     }
                 },
                 actions = {
-                    // Reset Week Button (Blue)
-                    IconButton(onClick = { showResetDialog = true }) {
+                    // Refresh button with subtle background
+                    FilledTonalIconButton(
+                        onClick = { showResetDialog = true },
+                        modifier = Modifier.size(36.dp),
+                        colors = IconButtonDefaults.filledTonalIconButtonColors(
+                            containerColor = Color(0xFF3B82F6).copy(alpha = 0.1f)
+                        )
+                    ) {
                         Icon(
                             imageVector = Icons.Default.Refresh,
                             contentDescription = stringResource(R.string.reset_week),
-                            tint = Color(0xFF3B82F6)
+                            tint = Color(0xFF3B82F6),
+                            modifier = Modifier.size(20.dp)
                         )
                     }
-                    // Notifications Button (Red)
-                    IconButton(onClick = onNavigateToAlarms) {
+                    
+                    Spacer(modifier = Modifier.width(4.dp))
+                    
+                    // Notifications button
+                    FilledTonalIconButton(
+                        onClick = onNavigateToAlarms,
+                        modifier = Modifier.size(36.dp),
+                        colors = IconButtonDefaults.filledTonalIconButtonColors(
+                            containerColor = Color(0xFFEF4444).copy(alpha = 0.1f)
+                        )
+                    ) {
                         Icon(
                             imageVector = Icons.Default.Notifications,
                             contentDescription = stringResource(R.string.notifications),
-                            tint = Color(0xFFEF4444)
+                            tint = Color(0xFFEF4444),
+                            modifier = Modifier.size(20.dp)
                         )
                     }
-                    // Settings Button (Dark Gray)
-                    IconButton(onClick = onNavigateToSettings) {
+                    
+                    Spacer(modifier = Modifier.width(4.dp))
+                    
+                    // Settings button
+                    FilledTonalIconButton(
+                        onClick = onNavigateToSettings,
+                        modifier = Modifier.size(36.dp),
+                        colors = IconButtonDefaults.filledTonalIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    ) {
                         Icon(
                             imageVector = Icons.Default.Settings,
                             contentDescription = stringResource(R.string.settings),
-                            tint = Color(0xFF374151)
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }
@@ -166,13 +214,19 @@ fun WorkoutScreen(
             
             // Timer Running Indicator
         timerState?.let { state ->
+            // Determine banner color based on state
+            val isRestComplete = !state.isRunning && state.timeLeft == 0
+            val bannerColor = if (isRestComplete) Color(0xFFDCFCE7) else Color(0xFFFEF3C7) // Green when complete, yellow when running
+            val textColor = if (isRestComplete) Color(0xFF166534) else Color(0xFF92400E)
+            val iconColor = if (isRestComplete) Color(0xFF22C55E) else Color(0xFFD97706)
+            
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp)
                     .clickable { showTimerDialog = true },
                     shape = RoundedCornerShape(12.dp),
-                    color = Color(0xFFFEF3C7),
+                    color = bannerColor,
                     tonalElevation = 2.dp
                 ) {
                     Row(
@@ -185,9 +239,9 @@ fun WorkoutScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Timer,
+                                imageVector = if (isRestComplete) Icons.Default.Check else Icons.Default.Timer,
                                 contentDescription = null,
-                                tint = Color(0xFFD97706),
+                                tint = iconColor,
                                 modifier = Modifier.size(20.dp)
                             )
                             Column {
@@ -195,20 +249,28 @@ fun WorkoutScreen(
                                     text = state.exerciseName,
                                     style = MaterialTheme.typography.labelMedium,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF92400E)
+                                    color = textColor
                                 )
                                 Text(
-                                    text = stringResource(R.string.set_of, state.currentSet, state.totalSets),
+                                    text = if (isRestComplete) {
+                                        stringResource(R.string.tap_for_next_set)
+                                    } else {
+                                        stringResource(R.string.set_of, state.currentSet, state.totalSets)
+                                    },
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = Color(0xFFA16207)
+                                    color = textColor.copy(alpha = 0.8f)
                                 )
                             }
                         }
                         Text(
-                            text = formatTime(state.timeLeft),
+                            text = if (isRestComplete) {
+                                stringResource(R.string.rest_complete)
+                            } else {
+                                formatTime(state.timeLeft)
+                            },
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF92400E)
+                            color = textColor
                         )
                     }
                 }

@@ -23,6 +23,7 @@ class TimerService : Service() {
     private var currentTimerState: TimerState? = null
     private var isPaused = false
     private var pausedTimeLeft = 0
+    private var isServiceStopping = false // Prevent race conditions
     
     companion object {
         const val ACTION_START_TIMER = "com.hananel.workouttracker2.START_TIMER"
@@ -89,8 +90,20 @@ class TimerService : Service() {
     }
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // Prevent actions when service is stopping
+        if (isServiceStopping && intent?.action != ACTION_STOP_TIMER) {
+            return START_NOT_STICKY
+        }
+        
         when (intent?.action) {
             ACTION_START_TIMER -> {
+                // Prevent starting new timer if one is already running
+                if (currentTimerState != null && currentTimerState?.isRunning == true && !isServiceStopping) {
+                    // Timer already running - ignore this request
+                    return START_STICKY
+                }
+                
+                isServiceStopping = false
                 val exerciseName = intent.getStringExtra(EXTRA_EXERCISE_NAME) ?: ""
                 val exerciseId = intent.getStringExtra(EXTRA_EXERCISE_ID) ?: ""
                 val restTime = intent.getIntExtra(EXTRA_REST_TIME, 60)
@@ -111,13 +124,19 @@ class TimerService : Service() {
                 stopTimerAndCleanup()
             }
             ACTION_NEXT_SET -> {
-                handleNextSet()
+                if (!isServiceStopping) {
+                    handleNextSet()
+                }
             }
             ACTION_SKIP_REST -> {
-                handleNextSet()
+                if (!isServiceStopping) {
+                    handleNextSet()
+                }
             }
             ACTION_PAUSE_RESUME -> {
-                handlePauseResume()
+                if (!isServiceStopping) {
+                    handlePauseResume()
+                }
             }
         }
         
@@ -213,6 +232,8 @@ class TimerService : Service() {
     }
     
     private fun onTimerComplete() {
+        if (isServiceStopping) return
+        
         currentTimerState?.let { state ->
             // Check if this was the last set
             val isLastSet = state.currentSet >= state.totalSets
@@ -233,62 +254,143 @@ class TimerService : Service() {
                 // Stop service and clear state
                 stopTimerAndCleanup()
             } else {
-                // Not last set - show completion notification
+                // Not last set - show completion notification with sound to alert user
                 showCompletionNotification()
                 
-                // Keep state but mark as not running
+                // Update state to show timer completed but waiting for user action
+                // Mark as NOT running so user knows rest is over
                 currentTimerState = state.copy(timeLeft = 0, isRunning = false)
                 serviceScope.launch {
                     repository?.saveTimerState(currentTimerState)
                 }
                 
-                // Update notification to show completion
-                updateNotification(0, state.exerciseName, state.currentSet, state.totalSets)
+                // Update notification to show "rest complete - tap for next set"
+                showRestCompleteNotification(state.exerciseName, state.currentSet, state.totalSets)
             }
         }
     }
     
+    private fun showRestCompleteNotification(exerciseName: String, currentSet: Int, totalSets: Int) {
+        // Intent to open app and show timer dialog
+        val openAppIntent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            putExtra("OPEN_TIMER_DIALOG", true)
+        }
+        val openAppPendingIntent = PendingIntent.getActivity(
+            this, 0, openAppIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        
+        // Next Set action - proceed to next set timer
+        val nextSetIntent = Intent(this, TimerActionReceiver::class.java).apply {
+            action = ACTION_NEXT_SET
+        }
+        val nextSetPendingIntent = PendingIntent.getBroadcast(
+            this, 4, nextSetIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        
+        // Stop timer action
+        val stopIntent = Intent(this, TimerActionReceiver::class.java).apply {
+            action = ACTION_STOP_TIMER
+        }
+        val stopPendingIntent = PendingIntent.getBroadcast(
+            this, 3, stopIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        
+        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("${getString(R.string.rest_complete)} - $exerciseName")
+            .setContentText("${getString(R.string.set_of, currentSet, totalSets)} • ${getString(R.string.tap_for_next_set)}")
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentIntent(openAppPendingIntent)
+            .setOngoing(true)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .addAction(
+                R.drawable.ic_launcher_foreground,
+                getString(R.string.next_set),
+                nextSetPendingIntent
+            )
+            .addAction(
+                R.drawable.ic_launcher_foreground,
+                getString(R.string.stop),
+                stopPendingIntent
+            )
+            .build()
+        
+        val notificationManager = getSystemService(NotificationManager::class.java)
+        notificationManager.notify(NOTIFICATION_ID, notification)
+    }
+    
     private fun handleNextSet() {
+        if (isServiceStopping) return
+        
         currentTimerState?.let { state ->
             val newCompletedSets = state.completedSets + 1
             
-            serviceScope.launch {
-                // Update completed sets in progress
-                repository?.updateExerciseCompletedSets(
-                    state.exerciseId,
-                    newCompletedSets,
-                    state.totalSets
-                )
-                
-                // Check if all sets are complete
-                if (newCompletedSets >= state.totalSets) {
-                    // All sets complete!
-                    showAllSetsCompleteNotification(state.exerciseName)
-                    stopTimerAndCleanup()
-                } else {
-                    // Start next set timer
-                    val nextSet = newCompletedSets + 1
-                    startTimerCountdown(
-                        exerciseName = state.exerciseName,
-                        exerciseId = state.exerciseId,
-                        restTime = state.totalTime,
-                        currentSet = nextSet,
-                        totalSets = state.totalSets,
-                        completedSets = newCompletedSets
+            // Check if all sets will be complete after this
+            if (newCompletedSets >= state.totalSets) {
+                // All sets complete!
+                serviceScope.launch {
+                    repository?.updateExerciseCompletedSets(
+                        state.exerciseId,
+                        newCompletedSets,
+                        state.totalSets
                     )
                 }
+                showAllSetsCompleteNotification(state.exerciseName)
+                stopTimerAndCleanup()
+            } else {
+                // Update completed sets first
+                serviceScope.launch {
+                    repository?.updateExerciseCompletedSets(
+                        state.exerciseId,
+                        newCompletedSets,
+                        state.totalSets
+                    )
+                }
+                
+                // Start next set timer
+                val nextSet = newCompletedSets + 1
+                startTimerCountdown(
+                    exerciseName = state.exerciseName,
+                    exerciseId = state.exerciseId,
+                    restTime = state.totalTime,
+                    currentSet = nextSet,
+                    totalSets = state.totalSets,
+                    completedSets = newCompletedSets
+                )
             }
+        } ?: run {
+            // No timer state - stop service
+            stopTimerAndCleanup()
         }
     }
     
     private fun stopTimerAndCleanup() {
+        // Mark service as stopping to prevent race conditions
+        isServiceStopping = true
+        
+        // Cancel any running timer immediately
         countDownTimer?.cancel()
         countDownTimer = null
         
+        // Clear local state immediately
+        currentTimerState = null
+        isPaused = false
+        pausedTimeLeft = 0
+        
+        // Clear persisted state - use runBlocking to ensure it completes before service stops
+        // This is safe because we're on the main thread and this is a quick operation
         serviceScope.launch {
-            repository?.saveTimerState(null)
+            try {
+                repository?.saveTimerState(null)
+            } catch (e: Exception) {
+                // Ignore errors during cleanup
+            }
         }
         
+        // Stop foreground and service
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
@@ -406,7 +508,20 @@ class TimerService : Service() {
     
     override fun onDestroy() {
         super.onDestroy()
+        isServiceStopping = true
         countDownTimer?.cancel()
+        countDownTimer = null
+        currentTimerState = null
+        
+        // Clear timer state from DataStore when service is destroyed
+        serviceScope.launch {
+            try {
+                repository?.saveTimerState(null)
+            } catch (e: Exception) {
+                // Ignore - service is being destroyed
+            }
+        }
+        
         serviceScope.cancel()
     }
 }

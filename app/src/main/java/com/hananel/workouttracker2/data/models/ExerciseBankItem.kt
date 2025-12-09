@@ -29,3 +29,6 @@ enum class MuscleGroup(val displayNameResId: Int) {
     CARDIO(com.hananel.workouttracker2.R.string.muscle_cardio)
 }
 
+
+
+
