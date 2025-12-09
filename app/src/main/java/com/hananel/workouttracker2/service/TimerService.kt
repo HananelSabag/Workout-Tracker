@@ -90,20 +90,25 @@ class TimerService : Service() {
     }
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // Prevent actions when service is stopping
-        if (isServiceStopping && intent?.action != ACTION_STOP_TIMER) {
+        // ACTION_STOP_TIMER always gets processed - no matter what state we're in
+        if (intent?.action == ACTION_STOP_TIMER) {
+            stopTimerAndCleanup()
+            return START_NOT_STICKY
+        }
+        
+        // Prevent other actions when service is stopping
+        if (isServiceStopping) {
             return START_NOT_STICKY
         }
         
         when (intent?.action) {
             ACTION_START_TIMER -> {
                 // Prevent starting new timer if one is already running
-                if (currentTimerState != null && currentTimerState?.isRunning == true && !isServiceStopping) {
+                if (currentTimerState != null && currentTimerState?.isRunning == true) {
                     // Timer already running - ignore this request
                     return START_STICKY
                 }
                 
-                isServiceStopping = false
                 val exerciseName = intent.getStringExtra(EXTRA_EXERCISE_NAME) ?: ""
                 val exerciseId = intent.getStringExtra(EXTRA_EXERCISE_ID) ?: ""
                 val restTime = intent.getIntExtra(EXTRA_REST_TIME, 60)
@@ -120,23 +125,14 @@ class TimerService : Service() {
                     completedSets = completedSets
                 )
             }
-            ACTION_STOP_TIMER -> {
-                stopTimerAndCleanup()
-            }
             ACTION_NEXT_SET -> {
-                if (!isServiceStopping) {
-                    handleNextSet()
-                }
+                handleNextSet()
             }
             ACTION_SKIP_REST -> {
-                if (!isServiceStopping) {
-                    handleNextSet()
-                }
+                handleNextSet()
             }
             ACTION_PAUSE_RESUME -> {
-                if (!isServiceStopping) {
-                    handlePauseResume()
-                }
+                handlePauseResume()
             }
         }
         
@@ -185,6 +181,10 @@ class TimerService : Service() {
         totalSets: Int,
         completedSets: Int
     ) {
+        // CRITICAL: Reset stopping flag when starting a new timer
+        isServiceStopping = false
+        isPaused = false
+        
         // Cancel any existing timer
         countDownTimer?.cancel()
         
@@ -333,7 +333,7 @@ class TimerService : Service() {
     }
     
     private fun handleNextSet() {
-        // Prevent handling if service is stopping
+        // Double-check stopping flag
         if (isServiceStopping) return
         
         // IMPORTANT: Cancel any running countdown timer FIRST
@@ -346,11 +346,8 @@ class TimerService : Service() {
             
             // Check if all sets will be complete after this
             if (newCompletedSets >= state.totalSets) {
-                // All sets complete - mark as stopping to prevent duplicate handling
-                isServiceStopping = true
-                
-                // Update exercise progress
-                serviceScope.launch {
+                // All sets complete - update progress synchronously
+                runBlocking {
                     repository?.updateExerciseCompletedSets(
                         state.exerciseId,
                         newCompletedSets,
@@ -361,7 +358,7 @@ class TimerService : Service() {
                 showAllSetsCompleteNotification(state.exerciseName)
                 stopTimerAndCleanup()
             } else {
-                // Update completed sets first
+                // Update completed sets
                 serviceScope.launch {
                     repository?.updateExerciseCompletedSets(
                         state.exerciseId,
@@ -370,7 +367,7 @@ class TimerService : Service() {
                     )
                 }
                 
-                // Start next set timer
+                // Start next set timer (this also resets isServiceStopping)
                 val nextSet = newCompletedSets + 1
                 startTimerCountdown(
                     exerciseName = state.exerciseName,
@@ -388,11 +385,7 @@ class TimerService : Service() {
     }
     
     private fun stopTimerAndCleanup() {
-        // Mark service as stopping to prevent race conditions
-        // If already stopping, don't do anything to prevent duplicate cleanup
-        if (isServiceStopping && currentTimerState == null && countDownTimer == null) {
-            return // Already cleaned up
-        }
+        // Mark service as stopping immediately
         isServiceStopping = true
         
         // Cancel any running timer immediately
@@ -404,13 +397,21 @@ class TimerService : Service() {
         isPaused = false
         pausedTimeLeft = 0
         
-        // Clear persisted state
-        serviceScope.launch {
+        // Clear persisted state SYNCHRONOUSLY to ensure it's done before service stops
+        runBlocking {
             try {
                 repository?.saveTimerState(null)
             } catch (e: Exception) {
                 // Ignore errors during cleanup
             }
+        }
+        
+        // Explicitly cancel the notification
+        try {
+            val notificationManager = getSystemService(NotificationManager::class.java)
+            notificationManager?.cancel(NOTIFICATION_ID)
+        } catch (e: Exception) {
+            // Ignore
         }
         
         // Stop foreground and service
@@ -419,6 +420,7 @@ class TimerService : Service() {
         } catch (e: Exception) {
             // Ignore - service might already be stopping
         }
+        
         stopSelf()
     }
     
