@@ -362,9 +362,19 @@ fun WorkoutScreen(
                         val isCompleted = remember(workoutProgress) {
                             workoutProgress?.completedExercises?.get(exercise.id) ?: false
                         }
-                        val completedSets = remember(workoutProgress) {
-                            workoutProgress?.exerciseCompletedSets?.get(exercise.id) ?: 0
+                        
+                        // For completed sets: if timer is running for THIS exercise, use timer state
+                        // This ensures UI is in sync with service state
+                        val completedSets = remember(workoutProgress, timerState) {
+                            if (timerState?.exerciseId == exercise.id) {
+                                // Timer is running for this exercise - use timer's completed sets
+                                timerState.completedSets
+                            } else {
+                                // No timer or different exercise - use progress data
+                                workoutProgress?.exerciseCompletedSets?.get(exercise.id) ?: 0
+                            }
                         }
+                        
                         val weight = remember(workoutProgress) {
                             workoutProgress?.exerciseWeights?.get(exercise.id) ?: 0f
                         }
@@ -503,20 +513,23 @@ fun WorkoutScreen(
             TimerDialog(
                 timerState = timerState!!,
                 onNextSet = {
-                    viewModel.completeSet(
-                        context = context,
-                        onAllSetsComplete = {
-                            scope.launch {
-                                snackbarHostState.showSnackbar(
-                                    message = context.getString(R.string.exercise_completed),
-                                    duration = SnackbarDuration.Short
-                                )
-                            }
-                        }
-                    )
+                    // Continue to next set - let service handle everything
+                    viewModel.completeSet(context)
+                },
+                onFinish = {
+                    // Finish button on last set - stop timer and mark complete
+                    viewModel.finishExercise(context)
+                    userClosedDialog = true
+                    showTimerDialog = false
+                    scope.launch {
+                        snackbarHostState.showSnackbar(
+                            message = context.getString(R.string.exercise_completed),
+                            duration = SnackbarDuration.Short
+                        )
+                    }
                 },
                 onStop = {
-                    // Stop immediately
+                    // Stop immediately (user wants to quit)
                     viewModel.stopTimer(context)
                     userClosedDialog = true
                     showTimerDialog = false

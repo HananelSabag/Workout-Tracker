@@ -275,17 +275,37 @@ class WorkoutViewModel(
         }
     }
     
-    fun completeSet(context: Context, onAllSetsComplete: () -> Unit) {
+    /**
+     * Called when user clicks "Next Set" to continue to the next set.
+     * Service handles incrementing completed sets and starting next timer.
+     */
+    fun completeSet(context: Context) {
         viewModelScope.launch {
-            // The service handles the next set logic
+            // The service handles everything: cancelling current timer, 
+            // updating sets, and starting next timer
             com.hananel.workouttracker2.service.TimerService.nextSet(context)
+        }
+    }
+    
+    /**
+     * Called when user clicks "Finish" on the last set.
+     * Stops timer and marks exercise as complete.
+     */
+    fun finishExercise(context: Context) {
+        viewModelScope.launch {
+            // Get current timer state before stopping
+            val currentState = _timerState.value
             
-            // Check if all sets are now complete
-            _timerState.value?.let { timerState ->
-                val newCompletedSets = timerState.completedSets + 1
-                if (newCompletedSets >= timerState.totalSets) {
-                    onAllSetsComplete()
-                }
+            // Stop the timer service
+            com.hananel.workouttracker2.service.TimerService.stopTimer(context)
+            
+            // Mark exercise as fully completed if we have the state
+            currentState?.let { state ->
+                repository.updateExerciseCompletedSets(
+                    state.exerciseId,
+                    state.totalSets,
+                    state.totalSets
+                )
             }
         }
     }

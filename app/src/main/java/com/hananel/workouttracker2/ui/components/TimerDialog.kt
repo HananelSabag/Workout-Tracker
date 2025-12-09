@@ -36,6 +36,7 @@ import com.hananel.workouttracker2.data.models.TimerState
 fun TimerDialog(
     timerState: TimerState,
     onNextSet: () -> Unit,
+    onFinish: () -> Unit, // Called when finishing the LAST set
     onStop: () -> Unit,
     onClose: () -> Unit,
     onTimerTick: (Int) -> Unit,
@@ -248,7 +249,15 @@ fun TimerDialog(
                         
                         // Next Set / Finish button
                         Button(
-                            onClick = onNextSet,
+                            onClick = {
+                                // If last set, call onFinish to stop timer
+                                // Otherwise call onNextSet to continue to next set
+                                if (isLastSet) {
+                                    onFinish()
+                                } else {
+                                    onNextSet()
+                                }
+                            },
                             modifier = Modifier
                                 .weight(1f)
                                 .height(52.dp),
