@@ -7,6 +7,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -29,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
 import com.hananel.workouttracker2.R
 import com.hananel.workouttracker2.data.DefaultData
@@ -882,97 +884,256 @@ private fun ExerciseSelectionDialog(
         }
     }
     
-    AlertDialog(
+    // Muscle group colors
+    val muscleGroupColors = mapOf(
+        "Chest" to Color(0xFFEF4444),
+        "Back" to Color(0xFF3B82F6),
+        "Shoulders" to Color(0xFFF59E0B),
+        "Biceps" to Color(0xFF8B5CF6),
+        "Triceps" to Color(0xFF10B981),
+        "Legs" to Color(0xFFEC4899),
+        "Core" to Color(0xFF06B6D4),
+        "Full Body" to Color(0xFF6366F1),
+        "Cardio" to Color(0xFFF97316)
+    )
+    
+    Dialog(
         onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = stringResource(R.string.add_exercise_to_day, dayName),
-                style = MaterialTheme.typography.titleLarge
-            )
-        },
-        text = {
+        properties = androidx.compose.ui.window.DialogProperties(
+            usePlatformDefaultWidth = false
+        )
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+                .heightIn(max = 600.dp),
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 6.dp
+        ) {
             Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                modifier = Modifier.fillMaxWidth()
             ) {
-                // Muscle Group Filters - Scrollable
+                // Header
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
+                                colors = listOf(Color(0xFF3B82F6), Color(0xFF8B5CF6))
+                            ),
+                            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+                        )
+                        .padding(20.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = stringResource(R.string.add_exercise),
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                            Text(
+                                text = dayName,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color.White.copy(alpha = 0.8f)
+                            )
+                        }
+                        FilledTonalIconButton(
+                            onClick = onDismiss,
+                            colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                containerColor = Color.White.copy(alpha = 0.2f),
+                                contentColor = Color.White
+                            )
+                        ) {
+                            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
+                        }
+                    }
+                }
+                
+                // Muscle Group Filters
                 LazyRow(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     item {
                         FilterChip(
                             selected = selectedMuscleGroup == null,
                             onClick = { selectedMuscleGroup = null },
-                            label = { Text(stringResource(R.string.all_exercises), fontSize = 13.sp) },
-                            modifier = Modifier.height(36.dp)
+                            label = { 
+                                Text(
+                                    stringResource(R.string.all_exercises), 
+                                    fontWeight = if (selectedMuscleGroup == null) FontWeight.Bold else FontWeight.Normal
+                                ) 
+                            },
+                            leadingIcon = if (selectedMuscleGroup == null) {
+                                { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                            } else null,
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = Color(0xFF3B82F6),
+                                selectedLabelColor = Color.White,
+                                selectedLeadingIconColor = Color.White
+                            )
                         )
                     }
                     items(muscleGroups) { muscle ->
+                        val chipColor = muscleGroupColors[muscle] ?: Color(0xFF6B7280)
                         FilterChip(
                             selected = selectedMuscleGroup == muscle,
                             onClick = { selectedMuscleGroup = muscle },
-                            label = { Text(muscle, fontSize = 13.sp) },
-                            modifier = Modifier.height(36.dp)
+                            label = { 
+                                Text(
+                                    muscle,
+                                    fontWeight = if (selectedMuscleGroup == muscle) FontWeight.Bold else FontWeight.Normal
+                                )
+                            },
+                            leadingIcon = if (selectedMuscleGroup == muscle) {
+                                { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                            } else null,
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = chipColor,
+                                selectedLabelColor = Color.White,
+                                selectedLeadingIconColor = Color.White
+                            )
                         )
                     }
                 }
                 
-                HorizontalDivider()
+                // Results count
+                Text(
+                    text = "${filteredExercises.size} ${stringResource(R.string.add_exercise).lowercase()}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
+                )
                 
-                // Exercise List - Show ALL filtered exercises
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                
+                // Exercise List
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(350.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                        .weight(1f)
+                        .padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(vertical = 12.dp)
                 ) {
                     items(filteredExercises) { exercise ->
-                        ElevatedCard(
+                        val primaryMuscle = exercise.muscleGroups.firstOrNull() ?: "Full Body"
+                        val accentColor = muscleGroupColors[primaryMuscle] ?: Color(0xFF6B7280)
+                        
+                        Surface(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = {
                                 onExerciseSelected(exercise)
                                 onDismiss()
-                            }
+                            },
+                            shape = RoundedCornerShape(14.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerLow,
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                            )
                         ) {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(12.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
+                                    .padding(14.dp),
+                                horizontalArrangement = Arrangement.spacedBy(14.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
+                                // Muscle indicator
+                                Box(
+                                    modifier = Modifier
+                                        .size(44.dp)
+                                        .background(
+                                            color = accentColor.copy(alpha = 0.15f),
+                                            shape = RoundedCornerShape(12.dp)
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.FitnessCenter,
+                                        contentDescription = null,
+                                        tint = accentColor,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
+                                
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         text = context.getString(exercise.nameResId),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Medium
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        fontWeight = FontWeight.SemiBold
                                     )
-                                    Text(
-                                        text = "${exercise.defaultSets} × ${exercise.defaultReps}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        // Sets × Reps badge
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = Color(0xFF3B82F6).copy(alpha = 0.1f)
+                                        ) {
+                                            Text(
+                                                text = "${exercise.defaultSets} × ${exercise.defaultReps}",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = Color(0xFF2563EB),
+                                                fontWeight = FontWeight.Medium,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                        // Rest time badge
+                                        if (exercise.defaultRestTime > 0) {
+                                            Surface(
+                                                shape = RoundedCornerShape(6.dp),
+                                                color = Color(0xFFF59E0B).copy(alpha = 0.1f)
+                                            ) {
+                                                Text(
+                                                    text = "${exercise.defaultRestTime}s",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = Color(0xFFD97706),
+                                                    fontWeight = FontWeight.Medium,
+                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                // Add button
+                                FilledTonalIconButton(
+                                    onClick = {
+                                        onExerciseSelected(exercise)
+                                        onDismiss()
+                                    },
+                                    colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                        containerColor = accentColor.copy(alpha = 0.15f),
+                                        contentColor = accentColor
+                                    ),
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = stringResource(R.string.add_exercise),
+                                        modifier = Modifier.size(20.dp)
                                     )
                                 }
-                                Icon(
-                                    imageVector = Icons.Default.Add,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(20.dp),
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
                             }
                         }
                     }
                 }
             }
-        },
-        confirmButton = {},
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.close))
-            }
         }
-    )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -1057,7 +1218,7 @@ internal fun DaySelectionScreen(
                 val hasExercises = existingDay != null && existingDay.exercises.isNotEmpty()
                 val exerciseCount = existingDay?.exercises?.size ?: 0
                 
-                ElevatedCard(
+                Surface(
                     modifier = Modifier.fillMaxWidth(),
                     onClick = {
                         // If unselecting a day with exercises, show warning
@@ -1069,14 +1230,14 @@ internal fun DaySelectionScreen(
                             onDayToggle(index)
                         }
                     },
-                    elevation = CardDefaults.elevatedCardElevation(
-                        defaultElevation = if (isSelected) 6.dp else 2.dp
-                    ),
-                    colors = CardDefaults.elevatedCardColors(
-                        containerColor = if (isSelected) {
-                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = androidx.compose.foundation.BorderStroke(
+                        width = if (isSelected) 2.dp else 1.dp,
+                        color = if (isSelected) {
+                            MaterialTheme.colorScheme.primary
                         } else {
-                            MaterialTheme.colorScheme.surface
+                            MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
                         }
                     )
                 ) {
@@ -1092,36 +1253,21 @@ internal fun DaySelectionScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.weight(1f)
                         ) {
-                            // Checkbox-style indicator
-                            Surface(
-                                shape = MaterialTheme.shapes.small,
-                                color = if (isSelected) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.surfaceVariant
-                                },
-                                modifier = Modifier.size(24.dp)
-                            ) {
-                                if (isSelected) {
-                                    Icon(
-                                        imageVector = Icons.Default.Check,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onPrimary,
-                                        modifier = Modifier.padding(4.dp)
-                                    )
-                                }
-                            }
+                            // Checkbox
+                            Checkbox(
+                                checked = isSelected,
+                                onCheckedChange = null, // Handled by Surface onClick
+                                colors = CheckboxDefaults.colors(
+                                    checkedColor = MaterialTheme.colorScheme.primary
+                                )
+                            )
                             
                             Column {
                                 Text(
                                     text = context.getString(nameResId),
                                     style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (isSelected) {
-                                        MaterialTheme.colorScheme.primary
-                                    } else {
-                                        MaterialTheme.colorScheme.onSurface
-                                    }
+                                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                                 
                                 // Show exercise count if day has exercises
@@ -1135,7 +1281,7 @@ internal fun DaySelectionScreen(
                             }
                         }
                         
-                        // Show warning icon if day has exercises and is selected
+                        // Show edit icon if day has exercises and is selected
                         if (isSelected && hasExercises) {
                             Icon(
                                 imageVector = Icons.Default.Edit,

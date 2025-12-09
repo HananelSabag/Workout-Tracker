@@ -44,6 +44,7 @@ fun WorkoutScreen(
     onNavigateToSettings: () -> Unit,
     onNavigateToAlarms: () -> Unit,
     onNavigateToCatalog: (String) -> Unit,
+    onNavigateToWorkoutBuilder: () -> Unit,
     onResetWeekly: () -> Unit,
     shouldOpenTimerDialog: Boolean = false,
     modifier: Modifier = Modifier
@@ -206,12 +207,14 @@ fun WorkoutScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Day Selector
-            DaySelector(
-                selectedDayIndex = selectedDayIndex,
-                enabledDays = enabledDays,
-                onDaySelected = { viewModel.selectDay(it) }
-            )
+            // Only show Day Selector when there are workout days
+            if (workoutDays.isNotEmpty()) {
+                DaySelector(
+                    selectedDayIndex = selectedDayIndex,
+                    enabledDays = enabledDays,
+                    onDaySelected = { viewModel.selectDay(it) }
+                )
+            }
             
             // Timer Running Indicator
         timerState?.let { state ->
@@ -438,7 +441,7 @@ fun WorkoutScreen(
                         )
                         Spacer(modifier = Modifier.height(32.dp))
                         Button(
-                            onClick = onNavigateToSettings,
+                            onClick = onNavigateToWorkoutBuilder,
                             modifier = Modifier
                                 .fillMaxWidth(0.7f)
                                 .height(56.dp),

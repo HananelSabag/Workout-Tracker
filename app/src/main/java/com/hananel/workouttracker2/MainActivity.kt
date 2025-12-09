@@ -30,6 +30,7 @@ import com.hananel.workouttracker2.data.repository.WorkoutRepository
 import com.hananel.workouttracker2.ui.screens.AlarmsScreen
 import com.hananel.workouttracker2.ui.screens.OnboardingScreen
 import com.hananel.workouttracker2.ui.screens.SettingsScreen
+import com.hananel.workouttracker2.ui.screens.WorkoutBuilderScreen
 import com.hananel.workouttracker2.ui.screens.WorkoutScreen
 import com.hananel.workouttracker2.ui.screens.WorkoutViewModel
 import com.hananel.workouttracker2.ui.screens.WorkoutViewModelFactory
@@ -211,6 +212,9 @@ fun AppNavigation(shouldOpenTimerDialog: Boolean = false) {
                 onNavigateToCatalog = { dayId ->
                     navController.navigate("exerciseCatalog/$dayId")
                 },
+                onNavigateToWorkoutBuilder = {
+                    navController.navigate("workoutBuilder")
+                },
                 onResetWeekly = {
                     scope.launch {
                         repository.resetWeeklyProgress()
@@ -260,6 +264,27 @@ fun AppNavigation(shouldOpenTimerDialog: Boolean = false) {
                         repository.resetWeeklyProgress()
                     }
                 }
+            )
+        }
+        
+        composable("workoutBuilder") {
+            val repository = remember { WorkoutRepository(context) }
+            
+            WorkoutBuilderScreen(
+                onFinish = { workoutDays ->
+                    scope.launch {
+                        repository.saveWorkoutStructure(workoutDays)
+                        // Update enabledDays based on selected days
+                        val enabledDays = workoutDays.map { it.dayIndex }.sorted()
+                        val prefs = repository.getUserPreferences()
+                        repository.saveUserPreferences(prefs.copy(enabledDays = enabledDays))
+                        navController.popBackStack()
+                    }
+                },
+                onBack = {
+                    navController.popBackStack()
+                },
+                loadExistingData = true
             )
         }
     }
