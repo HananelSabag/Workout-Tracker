@@ -352,6 +352,9 @@ private fun OnboardingPage2(
         WorkoutBuilderScreen(
             onFinish = { workoutDays ->
                 scope.launch {
+                    // CRITICAL: Clear ALL stale data first (cloud backup restore fix)
+                    repository.clearAllProgressAndTimerState()
+                    
                     repository.saveWorkoutStructure(workoutDays)
                     // Update enabledDays based on selected days
                     val enabledDays = workoutDays.map { it.dayIndex }.sorted()
@@ -397,6 +400,10 @@ private fun OnboardingPage2(
                     modifier = Modifier.fillMaxWidth(),
                     onClick = {
                         scope.launch {
+                            // CRITICAL: Clear ALL stale data first
+                            // This fixes issues with cloud backup restoring old timer state/progress
+                            repository.clearAllProgressAndTimerState()
+                            
                             // Load default workout structure
                             val defaultStructure = DefaultData.getDefaultWorkoutStructure()
                             repository.saveWorkoutStructure(defaultStructure)

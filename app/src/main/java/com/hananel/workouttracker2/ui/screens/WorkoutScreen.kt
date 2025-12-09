@@ -382,11 +382,18 @@ fun WorkoutScreen(
                                 if (timerState == null) {
                                     viewModel.startTimer(exercise, context)
                                 } else {
+                                    // Show snackbar with action to view/manage existing timer
                                     scope.launch {
-                                        snackbarHostState.showSnackbar(
+                                        val result = snackbarHostState.showSnackbar(
                                             message = context.getString(R.string.timer_already_running),
-                                            duration = SnackbarDuration.Short
+                                            actionLabel = context.getString(R.string.timer_view_action),
+                                            duration = SnackbarDuration.Long
                                         )
+                                        if (result == SnackbarResult.ActionPerformed) {
+                                            // Open timer dialog so user can see/stop the running timer
+                                            userClosedDialog = false
+                                            showTimerDialog = true
+                                        }
                                     }
                                 }
                             },

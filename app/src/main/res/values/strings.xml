@@ -259,7 +259,8 @@
     <!-- Timer Notification Actions -->
     <string name="paused">מושהה</string>
     <string name="remaining">נותרו</string>
-    <string name="timer_already_running">טיימר כבר פועל! עצור אותו לפני התחלת טיימר חדש</string>
+    <string name="timer_already_running">טיימר כבר פועל</string>
+    <string name="timer_view_action">הצג</string>
     
     <!-- Onboarding -->
     <string name="onboarding_welcome">ברוכים הבאים למעקב אימונים!</string>

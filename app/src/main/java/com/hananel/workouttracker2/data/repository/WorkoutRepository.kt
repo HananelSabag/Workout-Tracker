@@ -227,5 +227,38 @@ class WorkoutRepository(private val context: Context) {
             )
         )
     }
+    
+    /**
+     * Clears ALL progress and timer state.
+     * Use this when installing a new workout program to ensure clean slate.
+     * This fixes issues with stale data restored from cloud backup.
+     */
+    suspend fun clearAllProgressAndTimerState() {
+        context.dataStore.edit { preferences ->
+            // Clear timer state completely
+            preferences.remove(TIMER_STATE_KEY)
+            // Reset workout progress to fresh state (keeps nothing)
+            preferences[WORKOUT_PROGRESS_KEY] = json.encodeToString(
+                WorkoutProgress(
+                    completedExercises = emptyMap(),
+                    exerciseWeights = emptyMap(),
+                    exerciseNotes = emptyMap(),
+                    exerciseCompletedSets = emptyMap(),
+                    weekStartDate = DateUtils.getCurrentWeekStart(),
+                    lastUpdateTime = System.currentTimeMillis()
+                )
+            )
+        }
+    }
+    
+    /**
+     * Clears only the timer state.
+     * Use to clean up stale timer from cloud backup restore.
+     */
+    suspend fun clearTimerState() {
+        context.dataStore.edit { preferences ->
+            preferences.remove(TIMER_STATE_KEY)
+        }
+    }
 }
 

@@ -34,8 +34,40 @@ class WorkoutViewModel(
     val selectedDayIndex: StateFlow<Int> = _selectedDayIndex.asStateFlow()
     
     init {
+        validateAndClearStaleTimerState()
         loadData()
         setInitialDay()
+    }
+    
+    /**
+     * Validates timer state on app startup.
+     * Clears stale timer state that may have been restored from cloud backup.
+     * A timer is considered stale if:
+     * - It claims to be running but there's no actual service running
+     * - The exercise ID doesn't exist in current workout structure
+     */
+    private fun validateAndClearStaleTimerState() {
+        viewModelScope.launch {
+            val timerState = repository.getTimerState()
+            if (timerState != null) {
+                // Timer state exists - validate it
+                val workoutStructure = repository.getWorkoutStructure()
+                
+                // Check if exercise exists in current workout structure
+                val exerciseExists = workoutStructure
+                    .flatMap { it.exercises }
+                    .any { it.id == timerState.exerciseId }
+                
+                // Check if timer state is stale (from a different session/cloud restore)
+                // If no exercises exist, or the timer's exercise doesn't exist, clear it
+                val shouldClear = workoutStructure.isEmpty() || !exerciseExists
+                
+                if (shouldClear) {
+                    // Stale timer state - clear it
+                    repository.clearTimerState()
+                }
+            }
+        }
     }
     
     /**
@@ -85,7 +117,9 @@ class WorkoutViewModel(
                 if (isWorkoutDataValid(savedStructure)) {
                     _workoutDays.value = savedStructure
                 } else {
-                    // Data is corrupted - clear it and show empty state
+                    // Data is corrupted - clear EVERYTHING and show empty state
+                    // This includes progress and timer state which may also be stale
+                    repository.clearAllProgressAndTimerState()
                     repository.saveWorkoutStructure(emptyList())
                     _workoutDays.value = emptyList()
                 }
