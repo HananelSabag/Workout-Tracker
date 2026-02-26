@@ -137,6 +137,9 @@
     <string name="done">Done</string>
     <string name="back">Back</string>
     <string name="weight_not_set">Please set weight for exercise</string>
+    <string name="set_weight">Add weight</string>
+    <string name="no_exercises_found">No exercises found</string>
+    <string name="exercise_added_success">Exercise "%1$s" added!</string>
     <string name="add_custom_exercise">Add Custom Exercise</string>
     <string name="exercise_name">Exercise Name</string>
     <string name="rest_time_seconds">Rest Time (seconds)</string>

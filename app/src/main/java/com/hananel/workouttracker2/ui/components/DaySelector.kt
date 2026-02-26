@@ -1,14 +1,23 @@
 package com.hananel.workouttracker2.ui.components
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hananel.workouttracker2.R
@@ -20,56 +29,71 @@ fun DaySelector(
     onDaySelected: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Compact grid layout - all days visible without scrolling
-    Row(
+    LazyRow(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp)
     ) {
-        enabledDays.forEach { dayIndex ->
-            FilterChip(
-                selected = dayIndex == selectedDayIndex,
-                onClick = { onDaySelected(dayIndex) },
-                label = {
-                    Text(
-                        text = getDayShortName(dayIndex),
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = if (dayIndex == selectedDayIndex) FontWeight.Bold else FontWeight.Normal,
-                        fontSize = 13.sp
-                    )
-                },
-                leadingIcon = if (dayIndex == selectedDayIndex) {
-                    {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = null,
-                            modifier = Modifier.size(14.dp)
-                        )
-                    }
-                } else null,
-                modifier = Modifier
-                    .weight(1f)
-                    .height(40.dp)
+        items(enabledDays) { dayIndex ->
+            DayPillButton(
+                dayName = getDayShortName(dayIndex),
+                isSelected = dayIndex == selectedDayIndex,
+                onClick = { onDaySelected(dayIndex) }
             )
         }
     }
 }
 
 @Composable
-private fun getDayName(dayIndex: Int): String {
-    return stringResource(
-        id = when (dayIndex) {
-            0 -> R.string.day_sunday
-            1 -> R.string.day_monday
-            2 -> R.string.day_tuesday
-            3 -> R.string.day_wednesday
-            4 -> R.string.day_thursday
-            5 -> R.string.day_friday
-            6 -> R.string.day_saturday
-            else -> R.string.day_sunday
-        }
+private fun DayPillButton(
+    dayName: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val bgColor by animateColorAsState(
+        targetValue = if (isSelected) Color(0xFF3B82F6)
+                      else MaterialTheme.colorScheme.surfaceVariant,
+        animationSpec = tween(250),
+        label = "dayBg"
     )
+    val textColor by animateColorAsState(
+        targetValue = if (isSelected) Color.White
+                      else MaterialTheme.colorScheme.onSurfaceVariant,
+        animationSpec = tween(250),
+        label = "dayText"
+    )
+    val shadowElevation by animateDpAsState(
+        targetValue = if (isSelected) 6.dp else 0.dp,
+        animationSpec = spring(dampingRatio = 0.6f, stiffness = 300f),
+        label = "dayElev"
+    )
+    val scale by animateFloatAsState(
+        targetValue = if (isSelected) 1.07f else 1f,
+        animationSpec = spring(dampingRatio = 0.55f, stiffness = 380f),
+        label = "dayScale"
+    )
+
+    Surface(
+        onClick = onClick,
+        modifier = Modifier
+            .scale(scale)
+            .size(width = 56.dp, height = 56.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = bgColor,
+        shadowElevation = shadowElevation
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                text = dayName,
+                fontSize = 15.sp,
+                fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium,
+                color = textColor,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
 }
 
 @Composable
@@ -87,4 +111,3 @@ private fun getDayShortName(dayIndex: Int): String {
         }
     )
 }
-

@@ -24,6 +24,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -245,7 +246,7 @@ fun WorkoutScreen(
                 )
 
                 val progressFraction = if (state.totalTime > 0)
-                    state.timeLeft.toFloat() / state.totalTime.toFloat()
+                    (state.totalTime - state.timeLeft).toFloat() / state.totalTime.toFloat()
                 else 0f
                 val animatedProgress by animateFloatAsState(
                     targetValue = progressFraction,
@@ -345,21 +346,59 @@ fun WorkoutScreen(
                     contentPadding = PaddingValues(bottom = 80.dp)
                 ) {
                     item {
+                        val completedCount = remember(workoutProgress) {
+                            workoutProgress?.completedExercises?.count { it.value } ?: 0
+                        }
+                        val totalExercises = currentWorkout.exercises.size
+                        val isAllDone = completedCount == totalExercises && totalExercises > 0
+                        val progressFraction =
+                            if (totalExercises > 0) completedCount.toFloat() / totalExercises else 0f
+                        val animatedProgress by animateFloatAsState(
+                            targetValue = progressFraction,
+                            animationSpec = tween(600),
+                            label = "dayProgress"
+                        )
+                        val progressColor = if (isAllDone) Color(0xFF10B981) else Color(0xFF3B82F6)
+
+                        var showEditDialog by remember { mutableStateOf(false) }
+
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(bottom = 8.dp),
+                                .padding(bottom = 4.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalAlignment = Alignment.Top
                         ) {
-                            Text(
-                                text = currentWorkout.getDisplayName(context),
-                                style = MaterialTheme.typography.headlineMedium,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.weight(1f)
-                            )
-
-                            var showEditDialog by remember { mutableStateOf(false) }
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = currentWorkout.getDisplayName(context),
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    LinearProgressIndicator(
+                                        progress = { animatedProgress },
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(7.dp)
+                                            .clip(RoundedCornerShape(4.dp)),
+                                        color = progressColor,
+                                        trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)
+                                    )
+                                    Text(
+                                        text = "$completedCount/$totalExercises",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isAllDone) Color(0xFF10B981)
+                                                else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
 
                             IconButton(
                                 onClick = { showEditDialog = true },
@@ -371,34 +410,34 @@ fun WorkoutScreen(
                                     tint = MaterialTheme.colorScheme.primary
                                 )
                             }
+                        }
 
-                            if (showEditDialog) {
-                                var dayName by remember { mutableStateOf(currentWorkout.customName) }
-                                AlertDialog(
-                                    onDismissRequest = { showEditDialog = false },
-                                    title = { Text(stringResource(R.string.rename_day)) },
-                                    text = {
-                                        OutlinedTextField(
-                                            value = dayName,
-                                            onValueChange = { dayName = it },
-                                            label = { Text(stringResource(R.string.workout_title)) },
-                                            singleLine = true,
-                                            modifier = Modifier.fillMaxWidth()
-                                        )
-                                    },
-                                    confirmButton = {
-                                        TextButton(onClick = {
-                                            viewModel.renameWorkoutDay(currentWorkout.id, dayName)
-                                            showEditDialog = false
-                                        }) { Text(stringResource(R.string.save)) }
-                                    },
-                                    dismissButton = {
-                                        TextButton(onClick = { showEditDialog = false }) {
-                                            Text(stringResource(R.string.cancel))
-                                        }
+                        if (showEditDialog) {
+                            var dayName by remember { mutableStateOf(currentWorkout.customName) }
+                            AlertDialog(
+                                onDismissRequest = { showEditDialog = false },
+                                title = { Text(stringResource(R.string.rename_day)) },
+                                text = {
+                                    OutlinedTextField(
+                                        value = dayName,
+                                        onValueChange = { dayName = it },
+                                        label = { Text(stringResource(R.string.workout_title)) },
+                                        singleLine = true,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                },
+                                confirmButton = {
+                                    TextButton(onClick = {
+                                        viewModel.renameWorkoutDay(currentWorkout.id, dayName)
+                                        showEditDialog = false
+                                    }) { Text(stringResource(R.string.save)) }
+                                },
+                                dismissButton = {
+                                    TextButton(onClick = { showEditDialog = false }) {
+                                        Text(stringResource(R.string.cancel))
                                     }
-                                )
-                            }
+                                }
+                            )
                         }
                     }
 
@@ -566,7 +605,7 @@ fun WorkoutScreen(
                 onAdd = { name, sets, reps, restTime, hasWeight, weight ->
                     scope.launch {
                         snackbarHostState.showSnackbar(
-                            message = "תרגיל \"$name\" נוסף בהצלחה! (תכונה זו תשולב בגרסה הבאה)",
+                            message = context.getString(R.string.exercise_added_success, name),
                             duration = SnackbarDuration.Long
                         )
                     }

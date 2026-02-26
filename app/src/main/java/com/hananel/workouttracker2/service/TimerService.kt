@@ -24,7 +24,6 @@ class TimerService : Service() {
     private var isPaused = false
     private var pausedTimeLeft = 0
     private var isServiceStopping = false // Prevent race conditions
-    private var tickCount = 0 // Batch DataStore writes: save every 5 ticks instead of every second
     
     companion object {
         const val ACTION_START_TIMER = "com.hananel.workouttracker2.START_TIMER"
@@ -185,7 +184,6 @@ class TimerService : Service() {
         // CRITICAL: Reset stopping flag when starting a new timer
         isServiceStopping = false
         isPaused = false
-        tickCount = 0
         
         // Cancel any existing timer
         countDownTimer?.cancel()
@@ -218,12 +216,9 @@ class TimerService : Service() {
                 // Update state
                 currentTimerState = currentTimerState?.copy(timeLeft = secondsLeft)
 
-                // Save to DataStore every 5 seconds to avoid 60 writes/minute
-                tickCount++
-                if (tickCount % 5 == 0) {
-                    serviceScope.launch {
-                        repository?.saveTimerState(currentTimerState)
-                    }
+                // Save every tick so the UI updates every second (real-time countdown)
+                serviceScope.launch {
+                    repository?.saveTimerState(currentTimerState)
                 }
 
                 // Update notification

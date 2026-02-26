@@ -22,7 +22,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -128,211 +130,276 @@ private fun OnboardingPage1(
             }
         )
     }
-    
+
     var hasRequestedPermission by remember { mutableStateOf(false) }
-    
+
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         notificationPermissionGranted = isGranted
         hasRequestedPermission = true
     }
-    
-    // Auto-request permission when screen appears (once)
+
     LaunchedEffect(Unit) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val currentStatus = ContextCompat.checkSelfPermission(
                 context,
                 Manifest.permission.POST_NOTIFICATIONS
             ) == PackageManager.PERMISSION_GRANTED
-            
             notificationPermissionGranted = currentStatus
-            
-            // Auto-request if not granted and not yet requested
             if (!currentStatus && !hasRequestedPermission) {
-                // Small delay to let the UI settle before showing dialog
                 kotlinx.coroutines.delay(500)
                 permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
     }
-    
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceBetween
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+
+    Column(modifier = modifier.fillMaxSize()) {
+
+        // ── Gradient hero ─────────────────────────────────────────────────────
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(230.dp)
+                .background(
+                    brush = Brush.linearGradient(
+                        colors = listOf(Color(0xFF1D4ED8), Color(0xFF7C3AED))
+                    ),
+                    shape = RoundedCornerShape(bottomStart = 40.dp, bottomEnd = 40.dp)
+                ),
+            contentAlignment = Alignment.Center
         ) {
-            // Header - Logo centered with nice container
             Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.padding(bottom = 8.dp)
             ) {
-                // Logo with white background
                 Surface(
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(24.dp),
                     color = Color.White,
-                    shadowElevation = 4.dp,
-                    modifier = Modifier.size(90.dp)
+                    shadowElevation = 10.dp,
+                    modifier = Modifier.size(86.dp)
                 ) {
                     Image(
                         painter = painterResource(R.drawable.workout_logo),
                         contentDescription = null,
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(8.dp)
+                            .padding(10.dp)
                     )
                 }
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
                 Text(
                     text = stringResource(R.string.app_name),
                     style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color.White
                 )
                 Text(
                     text = stringResource(R.string.onboarding_page1_subtitle),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = Color.White.copy(alpha = 0.85f),
+                    textAlign = TextAlign.Center
                 )
             }
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            // Features Section
-            Text(
-                text = stringResource(R.string.onboarding_features_title),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.fillMaxWidth()
-            )
-            
-            // Compact Feature List
-            OnboardingFeatureItem(stringResource(R.string.onboarding_feature_1))
-            OnboardingFeatureItem(stringResource(R.string.onboarding_feature_2))
-            OnboardingFeatureItem(stringResource(R.string.onboarding_feature_3))
-            OnboardingFeatureItem(stringResource(R.string.onboarding_feature_4))
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            // Notification Permission - With status feedback
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = if (notificationPermissionGranted) {
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-                    } else {
-                        MaterialTheme.colorScheme.surfaceVariant
-                    }
+        }
+
+        // ── Features + permission + CTA ───────────────────────────────────────
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 20.dp),
+            contentPadding = PaddingValues(vertical = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            item {
+                Text(
+                    text = stringResource(R.string.onboarding_features_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(bottom = 4.dp)
                 )
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+            }
+            item {
+                OnboardingFeatureCard(
+                    icon = Icons.Default.FitnessCenter,
+                    iconColor = Color(0xFF3B82F6),
+                    text = stringResource(R.string.onboarding_feature_1)
+                )
+            }
+            item {
+                OnboardingFeatureCard(
+                    icon = Icons.Default.Timer,
+                    iconColor = Color(0xFFF59E0B),
+                    text = stringResource(R.string.onboarding_feature_2)
+                )
+            }
+            item {
+                OnboardingFeatureCard(
+                    icon = Icons.Default.List,
+                    iconColor = Color(0xFF10B981),
+                    text = stringResource(R.string.onboarding_feature_3)
+                )
+            }
+            item {
+                OnboardingFeatureCard(
+                    icon = Icons.Default.Language,
+                    iconColor = Color(0xFF8B5CF6),
+                    text = stringResource(R.string.onboarding_feature_4)
+                )
+            }
+
+            // Notification permission card
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (notificationPermissionGranted)
+                            Color(0xFFF0FDF4) else MaterialTheme.colorScheme.surfaceVariant
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Notifications,
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp),
-                            tint = if (notificationPermissionGranted) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            }
-                        )
-                        Column {
-                            Text(
-                                text = stringResource(R.string.enable_notifications_title),
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Text(
-                                text = if (notificationPermissionGranted) {
-                                    stringResource(R.string.notifications_granted)
-                                } else {
-                                    stringResource(R.string.enable_notifications_desc)
-                                },
-                                style = MaterialTheme.typography.bodySmall,
-                                color = if (notificationPermissionGranted) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                }
-                            )
-                        }
-                    }
-                    
-                    if (notificationPermissionGranted) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        TextButton(
-                            onClick = {
-                                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                            }
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
                         ) {
-                            Text(stringResource(R.string.allow_notifications))
+                            Box(
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .background(
+                                        color = if (notificationPermissionGranted)
+                                            Color(0xFF10B981).copy(alpha = 0.15f)
+                                        else Color(0xFFEF4444).copy(alpha = 0.12f),
+                                        shape = RoundedCornerShape(12.dp)
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Notifications,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(22.dp),
+                                    tint = if (notificationPermissionGranted)
+                                        Color(0xFF10B981) else Color(0xFFEF4444)
+                                )
+                            }
+                            Column {
+                                Text(
+                                    text = stringResource(R.string.enable_notifications_title),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    text = if (notificationPermissionGranted)
+                                        stringResource(R.string.notifications_granted)
+                                    else
+                                        stringResource(R.string.enable_notifications_desc),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (notificationPermissionGranted)
+                                        Color(0xFF10B981)
+                                    else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        if (notificationPermissionGranted) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                modifier = Modifier.size(22.dp),
+                                tint = Color(0xFF10B981)
+                            )
+                        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            FilledTonalButton(
+                                onClick = {
+                                    permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                },
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.allow_notifications),
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
                 }
             }
-        }
-        
-        // Next Button at bottom
-        Button(
-            onClick = onNext,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.next),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
+
+            // CTA button
+            item {
+                Spacer(modifier = Modifier.height(4.dp))
+                Button(
+                    onClick = onNext,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF2563EB)
+                    ),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.next),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Icon(
+                        imageVector = Icons.Default.ArrowForward,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun OnboardingFeatureItem(text: String) {
-    Row(
-        horizontalArrangement = Arrangement.Start,
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth()
+private fun OnboardingFeatureCard(
+    icon: ImageVector,
+    iconColor: Color,
+    text: String
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        color = iconColor.copy(alpha = 0.08f)
     ) {
-        Text(
-            text = "✓",
-            fontSize = 18.sp,
-            color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.Bold
-        )
-        Spacer(modifier = Modifier.width(12.dp))
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground
-        )
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 13.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(38.dp)
+                    .background(iconColor.copy(alpha = 0.18f), RoundedCornerShape(10.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = iconColor,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
     }
 }
 

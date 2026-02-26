@@ -137,6 +137,9 @@
     <string name="done">סיום</string>
     <string name="back">חזרה</string>
     <string name="weight_not_set">יש להגדיר משקל לתרגיל</string>
+    <string name="set_weight">הוסף משקל</string>
+    <string name="no_exercises_found">לא נמצאו תרגילים</string>
+    <string name="exercise_added_success">תרגיל \"%1$s\" נוסף!</string>
     <string name="add_custom_exercise">הוסף תרגיל מותאם</string>
     <string name="exercise_name">שם התרגיל</string>
     <string name="rest_time_seconds">זמן מנוחה (שניות)</string>

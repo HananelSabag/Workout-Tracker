@@ -1,17 +1,21 @@
 package com.hananel.workouttracker2.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -144,7 +148,7 @@ fun ExerciseCatalogScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "No exercises found",
+                                text = stringResource(R.string.no_exercises_found),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -156,6 +160,21 @@ fun ExerciseCatalogScreen(
     }
 }
 
+// ── Muscle-group accent colour ─────────────────────────────────────────────
+private fun muscleAccentColor(muscleGroup: String?): Color {
+    return when {
+        muscleGroup == null -> Color(0xFF3B82F6)
+        muscleGroup.contains("חזה") || muscleGroup.contains("chest", ignoreCase = true) -> Color(0xFF3B82F6)
+        muscleGroup.contains("גב")  || muscleGroup.contains("back", ignoreCase = true)  -> Color(0xFF10B981)
+        muscleGroup.contains("כתפיים") || muscleGroup.contains("shoulder", ignoreCase = true) -> Color(0xFF8B5CF6)
+        muscleGroup.contains("ידיים") || muscleGroup.contains("arm", ignoreCase = true) -> Color(0xFFF59E0B)
+        muscleGroup.contains("רגליים") || muscleGroup.contains("leg", ignoreCase = true) -> Color(0xFFEF4444)
+        muscleGroup.contains("ליבה") || muscleGroup.contains("core", ignoreCase = true) -> Color(0xFF06B6D4)
+        muscleGroup.contains("אירובי") || muscleGroup.contains("cardio", ignoreCase = true) -> Color(0xFF22C55E)
+        else -> Color(0xFF3B82F6)
+    }
+}
+
 @Composable
 private fun ExerciseCatalogCard(
     exercise: ExerciseBankItem,
@@ -163,98 +182,157 @@ private fun ExerciseCatalogCard(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    
-    ElevatedCard(
+    val accentColor = muscleAccentColor(exercise.muscleGroups.firstOrNull())
+
+    Card(
         modifier = modifier.fillMaxWidth(),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+        shape = RoundedCornerShape(18.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
+
+            // Left accent strip
+            Box(
+                modifier = Modifier
+                    .width(5.dp)
+                    .fillMaxHeight()
+                    .background(
+                        color = accentColor,
+                        shape = RoundedCornerShape(topStart = 18.dp, bottomStart = 18.dp)
+                    )
+            )
+
             Column(
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 14.dp, vertical = 14.dp)
             ) {
-                // Exercise Name
-                Text(
-                    text = context.getString(exercise.nameResId),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                
-                Spacer(modifier = Modifier.height(4.dp))
-                
-                // Equipment
+                // Name + sets×reps
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.FitnessCenter,
-                        contentDescription = null,
-                        modifier = Modifier.size(14.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = exercise.equipment,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                        Text(
+                            text = context.getString(exercise.nameResId),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(5.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            // Sets × Reps chip
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = Color(0xFF3B82F6).copy(alpha = 0.12f)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.FitnessCenter,
+                                        contentDescription = null,
+                                        tint = Color(0xFF3B82F6),
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                    Text(
+                                        text = "${exercise.defaultSets} × ${exercise.defaultReps}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = Color(0xFF3B82F6),
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                            // Rest time chip
+                            if (exercise.defaultRestTime > 0) {
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = Color(0xFFF59E0B).copy(alpha = 0.12f)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Timer,
+                                            contentDescription = null,
+                                            tint = Color(0xFFF59E0B),
+                                            modifier = Modifier.size(12.dp)
+                                        )
+                                        Text(
+                                            text = "${exercise.defaultRestTime}s",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = Color(0xFFF59E0B),
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Add button
+                    Button(
+                        onClick = onAddClick,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = accentColor),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
+                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = stringResource(R.string.add_to_workout),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
-                
-                Spacer(modifier = Modifier.height(4.dp))
-                
-                // Default Sets × Reps
-                Text(
-                    text = "${exercise.defaultSets} × ${exercise.defaultReps}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                
-                Spacer(modifier = Modifier.height(4.dp))
-                
-                // Muscle Groups (tags)
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Muscle group + equipment tags
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    modifier = Modifier.padding(top = 4.dp)
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     exercise.muscleGroups.forEach { muscle ->
                         Surface(
-                            shape = MaterialTheme.shapes.small,
-                            color = MaterialTheme.colorScheme.secondaryContainer,
-                            modifier = Modifier.padding(0.dp)
+                            shape = RoundedCornerShape(6.dp),
+                            color = accentColor.copy(alpha = 0.13f)
                         ) {
                             Text(
                                 text = muscle,
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                color = accentColor,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+                    if (exercise.equipment.isNotBlank()) {
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant
+                        ) {
+                            Text(
+                                text = exercise.equipment,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                             )
                         }
                     }
                 }
-            }
-            
-            Spacer(modifier = Modifier.width(12.dp))
-            
-            // Add Button
-            FilledTonalButton(
-                onClick = onAddClick,
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = stringResource(R.string.add_to_workout),
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = stringResource(R.string.add_to_workout),
-                    style = MaterialTheme.typography.labelLarge
-                )
             }
         }
     }
