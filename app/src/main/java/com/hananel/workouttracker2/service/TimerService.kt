@@ -24,6 +24,7 @@ class TimerService : Service() {
     private var isPaused = false
     private var pausedTimeLeft = 0
     private var isServiceStopping = false // Prevent race conditions
+    private var tickCount = 0 // Batch DataStore writes: save every 5 ticks instead of every second
     
     companion object {
         const val ACTION_START_TIMER = "com.hananel.workouttracker2.START_TIMER"
@@ -184,6 +185,7 @@ class TimerService : Service() {
         // CRITICAL: Reset stopping flag when starting a new timer
         isServiceStopping = false
         isPaused = false
+        tickCount = 0
         
         // Cancel any existing timer
         countDownTimer?.cancel()
@@ -212,15 +214,18 @@ class TimerService : Service() {
         countDownTimer = object : CountDownTimer((restTime * 1000).toLong(), 1000) {
             override fun onTick(millisUntilFinished: Long) {
                 val secondsLeft = (millisUntilFinished / 1000).toInt()
-                
+
                 // Update state
                 currentTimerState = currentTimerState?.copy(timeLeft = secondsLeft)
-                
-                // Save to DataStore
-                serviceScope.launch {
-                    repository?.saveTimerState(currentTimerState)
+
+                // Save to DataStore every 5 seconds to avoid 60 writes/minute
+                tickCount++
+                if (tickCount % 5 == 0) {
+                    serviceScope.launch {
+                        repository?.saveTimerState(currentTimerState)
+                    }
                 }
-                
+
                 // Update notification
                 updateNotification(secondsLeft, exerciseName, currentSet, totalSets)
             }
@@ -245,16 +250,16 @@ class TimerService : Service() {
             if (isLastSet) {
                 // Last set complete - stop everything
                 showAllSetsCompleteNotification(state.exerciseName)
-                
-                serviceScope.launch {
-                    // Mark exercise as fully completed
+
+                // Save progress SYNCHRONOUSLY before cleanup — async would race with stopSelf()
+                runBlocking {
                     repository?.updateExerciseCompletedSets(
                         state.exerciseId,
                         state.totalSets,
                         state.totalSets
                     )
                 }
-                
+
                 // Stop service and clear state
                 stopTimerAndCleanup()
             } else {
@@ -281,9 +286,9 @@ class TimerService : Service() {
     }
     
     private fun showRestCompleteNotification(exerciseName: String, currentSet: Int, totalSets: Int) {
-        // Intent to open app and show timer dialog
+        // Intent to open app and show timer dialog — use SINGLE_TOP to preserve Activity state
         val openAppIntent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
             putExtra("OPEN_TIMER_DIALOG", true)
         }
         val openAppPendingIntent = PendingIntent.getActivity(
@@ -441,9 +446,9 @@ class TimerService : Service() {
     }
     
     private fun createTimerNotification(timeLeft: Int, exerciseName: String, currentSet: Int, totalSets: Int): Notification {
-        // Intent to open app and show timer dialog
+        // Intent to open app — use SINGLE_TOP so existing Activity is reused (preserves remember state)
         val openAppIntent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
             putExtra("OPEN_TIMER_DIALOG", true)
         }
         val openAppPendingIntent = PendingIntent.getActivity(

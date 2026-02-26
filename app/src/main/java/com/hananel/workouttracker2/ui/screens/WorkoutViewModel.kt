@@ -289,24 +289,12 @@ class WorkoutViewModel(
     
     /**
      * Called when user clicks "Finish" on the last set.
-     * Stops timer and marks exercise as complete.
+     * The Service exclusively handles progress updates — ViewModel only stops the service.
+     * Previously had a race condition: both ViewModel and Service wrote progress simultaneously.
      */
     fun finishExercise(context: Context) {
         viewModelScope.launch {
-            // Get current timer state before stopping
-            val currentState = _timerState.value
-            
-            // Stop the timer service
             com.hananel.workouttracker2.service.TimerService.stopTimer(context)
-            
-            // Mark exercise as fully completed if we have the state
-            currentState?.let { state ->
-                repository.updateExerciseCompletedSets(
-                    state.exerciseId,
-                    state.totalSets,
-                    state.totalSets
-                )
-            }
         }
     }
     

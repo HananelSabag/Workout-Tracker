@@ -2,6 +2,7 @@ package com.hananel.workouttracker2.ui.components
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -68,13 +69,16 @@ fun ExerciseCard(
                 color = borderColor,
                 shape = RoundedCornerShape(20.dp)
             ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = if (isCompleted) 0.dp else 2.dp
+        ),
         colors = CardDefaults.cardColors(containerColor = containerColor),
         shape = RoundedCornerShape(20.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .animateContentSize()
                 .padding(16.dp)
         ) {
             // Header: Title + Menu + Complete Button

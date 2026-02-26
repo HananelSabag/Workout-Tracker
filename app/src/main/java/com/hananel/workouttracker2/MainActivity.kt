@@ -72,13 +72,16 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         
         setContent {
-            WorkoutTrackerApp(shouldOpenTimerDialog = shouldOpenTimerDialog.value)
+            WorkoutTrackerApp(
+                shouldOpenTimerDialog = shouldOpenTimerDialog.value,
+                onTimerDialogOpened = { _shouldOpenTimerDialog.value = false }
+            )
         }
     }
-    
+
     override fun onNewIntent(newIntent: android.content.Intent) {
         super.onNewIntent(newIntent)
-        // Handle new intent when app is already running
+        // Handle new intent when app is already running (singleTop preserves Activity + remember state)
         _shouldOpenTimerDialog.value = newIntent.getBooleanExtra("OPEN_TIMER_DIALOG", false)
     }
     
@@ -125,38 +128,46 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun WorkoutTrackerApp(shouldOpenTimerDialog: Boolean = false) {
+fun WorkoutTrackerApp(
+    shouldOpenTimerDialog: Boolean = false,
+    onTimerDialogOpened: () -> Unit = {}
+) {
     val context = LocalContext.current
     val repository = remember { WorkoutRepository(context) }
-    val scope = rememberCoroutineScope()
-    
+
     var preferences by remember { mutableStateOf<com.hananel.workouttracker2.data.models.UserPreferences?>(null) }
-    
+
     LaunchedEffect(Unit) {
         repository.getUserPreferencesFlow().collect { prefs ->
             preferences = prefs
         }
     }
-    
+
     val themeMode = preferences?.getThemeMode() ?: ThemeMode.SYSTEM
     val darkTheme = when (themeMode) {
         ThemeMode.LIGHT -> false
         ThemeMode.DARK -> true
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
     }
-    
+
     WorkoutTrackerTheme(darkTheme = darkTheme) {
         Surface(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
         ) {
-            AppNavigation(shouldOpenTimerDialog = shouldOpenTimerDialog)
+            AppNavigation(
+                shouldOpenTimerDialog = shouldOpenTimerDialog,
+                onTimerDialogOpened = onTimerDialogOpened
+            )
         }
     }
 }
 
 @Composable
-fun AppNavigation(shouldOpenTimerDialog: Boolean = false) {
+fun AppNavigation(
+    shouldOpenTimerDialog: Boolean = false,
+    onTimerDialogOpened: () -> Unit = {}
+) {
     val navController = rememberNavController()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -220,7 +231,8 @@ fun AppNavigation(shouldOpenTimerDialog: Boolean = false) {
                         repository.resetWeeklyProgress()
                     }
                 },
-                shouldOpenTimerDialog = shouldOpenTimerDialog
+                shouldOpenTimerDialog = shouldOpenTimerDialog,
+                onTimerDialogOpened = onTimerDialogOpened
             )
         }
         

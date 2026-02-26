@@ -63,9 +63,9 @@ class NotificationHelper(private val context: Context) {
     
     fun showWorkoutReminder(message: String? = null) {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        
+
         val intent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
         
         val pendingIntent = PendingIntent.getActivity(
@@ -89,9 +89,10 @@ class NotificationHelper(private val context: Context) {
     
     fun showTimerComplete(exerciseName: String, currentSet: Int, totalSets: Int) {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        
+
         val intent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            putExtra("OPEN_TIMER_DIALOG", true)
         }
         
         val pendingIntent = PendingIntent.getActivity(
@@ -117,9 +118,9 @@ class NotificationHelper(private val context: Context) {
     
     fun showExerciseComplete(exerciseName: String) {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        
+
         val intent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
         
         val pendingIntent = PendingIntent.getActivity(
@@ -145,9 +146,9 @@ class NotificationHelper(private val context: Context) {
     
     fun showWeeklyReset() {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        
+
         val intent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
         
         val pendingIntent = PendingIntent.getActivity(
@@ -166,9 +167,9 @@ class NotificationHelper(private val context: Context) {
             .setAutoCancel(true)
             .build()
         
-        notificationManager.notify(1003, notification)
+        notificationManager.notify(1005, notification) // 1005 — avoids collision with TimerService.NOTIFICATION_ID (1003)
     }
-    
+
     fun scheduleWorkoutReminder(alarm: WorkoutAlarm) {
         val timeParts = alarm.time.split(":")
         val hour = timeParts[0].toInt()
