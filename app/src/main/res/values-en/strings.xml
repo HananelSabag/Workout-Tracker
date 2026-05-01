@@ -84,6 +84,7 @@
     <string name="kg">kg</string>
     <string name="start_rest">Start Rest</string>
     <string name="resume_rest">Resume Rest</string>
+    <string name="start_next_set">Start Next Set</string>
     <string name="finished">Finished</string>
     <string name="mark_complete">Mark Complete</string>
     
@@ -164,6 +165,16 @@
     <string name="has_weight_hint">Enable if exercise requires weight (dumbbells, barbell, etc.)</string>
     <string name="completed_badge">Completed</string>
     
+    <!-- Workout Schedule -->
+    <string name="workout_schedule_title">Weekly schedule</string>
+    <string name="workout_schedule_hint">Pick which days you train</string>
+    <string name="workout_schedule_summary">%1$d days: %2$s</string>
+    <string name="workout_schedule_none">No workout days selected</string>
+    <string name="preset_3day_odd">Sun · Tue · Thu</string>
+    <string name="preset_3day_even">Mon · Wed · Fri</string>
+    <string name="preset_4day">4 days</string>
+    <string name="preset_5day">5 days</string>
+
     <!-- General Settings -->
     <string name="general">General</string>
     <string name="auto_open_current_day">Auto-open current day</string>

@@ -66,6 +66,8 @@ fun ExerciseCard(
     onToggleComplete: () -> Unit,
     onEditExercise: ((sets: Int, reps: String, restTime: Int, weight: Float) -> Unit)? = null,
     onDeleteExercise: (() -> Unit)? = null,
+    isRestCompleteForThis: Boolean = false,
+    isRestRunningForThis: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var showEditDialog  by remember { mutableStateOf(false) }
@@ -259,6 +261,8 @@ fun ExerciseCard(
                         isCompleted   = isCompleted,
                         completedSets = completedSets,
                         totalSets     = exercise.sets,
+                        isRestCompleteForThis = isRestCompleteForThis,
+                        isRestRunningForThis  = isRestRunningForThis,
                         onClick       = onStartRest,
                         modifier      = Modifier.fillMaxWidth()
                     )
@@ -464,18 +468,27 @@ private fun ExerciseActionButton(
     isCompleted: Boolean,
     completedSets: Int,
     totalSets: Int,
+    isRestCompleteForThis: Boolean,
+    isRestRunningForThis: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val bgColor by animateColorAsState(
-        targetValue = if (isCompleted) Green500 else Blue500,
+        targetValue = when {
+            isCompleted            -> Green500
+            isRestCompleteForThis  -> Green500
+            else                   -> Blue500
+        },
         animationSpec = tween(300),
         label = "btnBg"
     )
 
     Button(
         onClick = onClick,
-        enabled = !isCompleted && completedSets < totalSets,
+        // Disable while a rest countdown is actively running for THIS exercise so the user can't
+        // double-tap; but keep enabled when isRestComplete so they can advance the timer right
+        // from the card without opening the sheet.
+        enabled = !isCompleted && completedSets < totalSets && !isRestRunningForThis,
         modifier = modifier.height(50.dp),
         shape = RoundedCornerShape(14.dp),
         colors = ButtonDefaults.buttonColors(
@@ -485,16 +498,22 @@ private fun ExerciseActionButton(
         elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
     ) {
         Icon(
-            imageVector = if (isCompleted) Icons.Default.Check else Icons.Default.PlayArrow,
+            imageVector = when {
+                isCompleted           -> Icons.Default.Check
+                isRestCompleteForThis -> Icons.Default.SkipNext
+                else                  -> Icons.Default.PlayArrow
+            },
             contentDescription = null,
             modifier = Modifier.size(20.dp)
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = when {
-                isCompleted       -> stringResource(R.string.finished)
-                completedSets > 0 -> stringResource(R.string.resume_rest)
-                else              -> stringResource(R.string.start_rest)
+                isCompleted           -> stringResource(R.string.finished)
+                isRestCompleteForThis -> stringResource(R.string.start_next_set)
+                isRestRunningForThis  -> stringResource(R.string.resume_rest)
+                completedSets > 0     -> stringResource(R.string.resume_rest)
+                else                  -> stringResource(R.string.start_rest)
             },
             fontWeight = FontWeight.Bold,
             fontSize = 15.sp

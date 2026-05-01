@@ -83,15 +83,24 @@ fun WorkoutScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    // Auto-open timer sheet ONLY when a NEW timer starts (exerciseId or currentSet key changes)
-    LaunchedEffect(timerState?.exerciseId, timerState?.currentSet) {
+    // Auto-open timer sheet when:
+    //  - a NEW countdown starts (key on exerciseId+currentSet), OR
+    //  - the user re-enters the app and rest is already complete (isRestComplete flips to true).
+    // Without the second key, a user who left the app during rest and returns AFTER the rest
+    // finished would see only the banner with no clear way to advance — the sheet exposes the big
+    // "Start Next Set" action.
+    LaunchedEffect(
+        timerState?.exerciseId,
+        timerState?.currentSet,
+        timerState?.isRestComplete
+    ) {
         val currentTimerState = timerState
         when {
             currentTimerState == null -> {
                 showTimerSheet = false
                 userClosedSheet = false
             }
-            currentTimerState.isRunning && !userClosedSheet -> {
+            (currentTimerState.isRunning || currentTimerState.isRestComplete) && !userClosedSheet -> {
                 showTimerSheet = true
             }
         }
@@ -215,7 +224,9 @@ fun WorkoutScreen(
 
             // ── Timer Running Banner ──────────────────────────────────────────
             timerState?.let { state ->
-                val isRestComplete = !state.isRunning && state.timeLeft == 0
+                // Use the explicit flag from the service. Falls back to the inferred condition for
+                // states persisted by older versions before the flag existed.
+                val isRestComplete = state.isRestComplete || (!state.isRunning && state.timeLeft == 0)
 
                 val bannerBg by animateColorAsState(
                     targetValue = if (isRestComplete) Color(0xFFDCFCE7) else Color(0xFFFFF7ED),
@@ -454,25 +465,45 @@ fun WorkoutScreen(
                             workoutProgress?.exerciseWeights?.get(exercise.id) ?: 0f
                         }
 
+                        val activeTimer = timerState
+                        // True when this card's exercise is the one the timer is currently
+                        // associated with AND the rest already finished — the action button should
+                        // say "Start Next Set" and tapping it advances the same timer.
+                        val isRestCompleteForThis = activeTimer != null
+                            && activeTimer.exerciseId == exercise.id
+                            && (activeTimer.isRestComplete || (!activeTimer.isRunning && activeTimer.timeLeft == 0))
+                        // True while the rest countdown is actively running for THIS exercise —
+                        // disables the start button to prevent double-starts.
+                        val isRestRunningForThis = activeTimer != null
+                            && activeTimer.exerciseId == exercise.id
+                            && activeTimer.isRunning
+
                         ExerciseCard(
                             exercise = exercise,
                             isCompleted = isCompleted,
                             completedSets = completedSets,
                             weight = weight,
+                            isRestCompleteForThis = isRestCompleteForThis,
+                            isRestRunningForThis = isRestRunningForThis,
                             onWeightChange = { viewModel.updateExerciseWeight(exercise.id, it) },
                             onStartRest = {
-                                if (timerState == null) {
-                                    viewModel.startTimer(exercise, context)
-                                } else {
-                                    scope.launch {
-                                        val result = snackbarHostState.showSnackbar(
-                                            message = context.getString(R.string.timer_already_running),
-                                            actionLabel = context.getString(R.string.timer_view_action),
-                                            duration = SnackbarDuration.Long
-                                        )
-                                        if (result == SnackbarResult.ActionPerformed) {
-                                            userClosedSheet = false
-                                            showTimerSheet = true
+                                when {
+                                    isRestCompleteForThis -> {
+                                        // Rest already finished for this exercise — advance the timer.
+                                        viewModel.completeSet(context)
+                                    }
+                                    activeTimer == null -> viewModel.startTimer(exercise, context)
+                                    else -> {
+                                        scope.launch {
+                                            val result = snackbarHostState.showSnackbar(
+                                                message = context.getString(R.string.timer_already_running),
+                                                actionLabel = context.getString(R.string.timer_view_action),
+                                                duration = SnackbarDuration.Long
+                                            )
+                                            if (result == SnackbarResult.ActionPerformed) {
+                                                userClosedSheet = false
+                                                showTimerSheet = true
+                                            }
                                         }
                                     }
                                 }

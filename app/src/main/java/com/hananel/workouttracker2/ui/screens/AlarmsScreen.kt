@@ -20,7 +20,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -414,173 +413,208 @@ fun AlarmDialog(
     var selectedTime by remember { mutableStateOf(alarm?.time ?: "08:00") }
     var selectedDays by remember { mutableStateOf(alarm?.daysOfWeek ?: emptySet()) }
     var customMessage by remember { mutableStateOf(alarm?.customMessage ?: "") }
-    
-    AlertDialog(
+
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val accent = Color(0xFFEF4444)
+
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = {
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surface
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp)
+        ) {
+            // Header
             Row(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.Outlined.Alarm,
-                    contentDescription = null,
-                    tint = Color(0xFFEF4444)
-                )
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(accent.copy(alpha = 0.14f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Alarm,
+                        contentDescription = null,
+                        tint = accent,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
                 Text(
-                    text = if (alarm != null) {
-                        stringResource(R.string.edit_alarm)
-                    } else {
-                        stringResource(R.string.add_alarm)
-                    },
+                    text = if (alarm != null) stringResource(R.string.edit_alarm)
+                    else stringResource(R.string.add_alarm),
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
             }
-        },
-        text = {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(20.dp)
+
+            // ── Section: When ────────────────────────────────────────────────
+            SheetSectionLabel(stringResource(R.string.alarm_time))
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(18.dp))
+                    .clickable {
+                        val timeParts = selectedTime.split(":")
+                        val hour = timeParts[0].toInt()
+                        val minute = timeParts[1].toInt()
+                        TimePickerDialog(
+                            context,
+                            { _, selectedHour, selectedMinute ->
+                                selectedTime = String.format("%02d:%02d", selectedHour, selectedMinute)
+                            },
+                            hour,
+                            minute,
+                            true
+                        ).show()
+                    },
+                shape = RoundedCornerShape(18.dp),
+                color = accent.copy(alpha = 0.1f)
             ) {
-                // Time Picker Card
-                Surface(
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .clickable {
-                            val timeParts = selectedTime.split(":")
-                            val hour = timeParts[0].toInt()
-                            val minute = timeParts[1].toInt()
-                            
-                            TimePickerDialog(
-                                context,
-                                { _, selectedHour, selectedMinute ->
-                                    selectedTime = String.format("%02d:%02d", selectedHour, selectedMinute)
-                                },
-                                hour,
-                                minute,
-                                true
-                            ).show()
-                        },
-                    shape = RoundedCornerShape(16.dp),
-                    color = Color(0xFFEF4444).copy(alpha = 0.1f)
+                        .padding(horizontal = 20.dp, vertical = 18.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(20.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                text = stringResource(R.string.alarm_time),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = Color(0xFFEF4444)
-                            )
-                            Text(
-                                text = selectedTime,
-                                style = MaterialTheme.typography.headlineLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFFDC2626)
-                            )
-                        }
-                        Icon(
-                            imageVector = Icons.Default.Schedule,
-                            contentDescription = null,
-                            tint = Color(0xFFEF4444),
-                            modifier = Modifier.size(32.dp)
+                    Column {
+                        Text(
+                            text = stringResource(R.string.select_time),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = accent
+                        )
+                        Text(
+                            text = selectedTime,
+                            style = MaterialTheme.typography.displaySmall,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color(0xFFDC2626)
                         )
                     }
-                }
-                
-                // Days Selection
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(
-                        text = stringResource(R.string.select_days),
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold
+                    Icon(
+                        imageVector = Icons.Default.Schedule,
+                        contentDescription = null,
+                        tint = accent,
+                        modifier = Modifier.size(36.dp)
                     )
-                    
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                }
+            }
+
+            // ── Section: Days ────────────────────────────────────────────────
+            SheetSectionLabel(stringResource(R.string.select_days))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                listOf(
+                    "א" to 0, "ב" to 1, "ג" to 2, "ד" to 3, "ה" to 4, "ו" to 5, "ש" to 6
+                ).forEach { (day, index) ->
+                    val selected = selectedDays.contains(index)
+                    Surface(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .clickable {
+                                selectedDays = if (selected) selectedDays - index
+                                else selectedDays + index
+                            },
+                        shape = RoundedCornerShape(14.dp),
+                        color = if (selected) accent
+                        else MaterialTheme.colorScheme.surfaceVariant
                     ) {
-                        listOf(
-                            "א" to 0, "ב" to 1, "ג" to 2, "ד" to 3, "ה" to 4, "ו" to 5, "ש" to 6
-                        ).forEach { (day, index) ->
-                            Surface(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(44.dp)
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .clickable {
-                                        selectedDays = if (selectedDays.contains(index)) {
-                                            selectedDays - index
-                                        } else {
-                                            selectedDays + index
-                                        }
-                                    },
-                                shape = RoundedCornerShape(10.dp),
-                                color = if (selectedDays.contains(index)) {
-                                    Color(0xFFEF4444)
-                                } else {
-                                    MaterialTheme.colorScheme.surfaceVariant
-                                }
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Text(
-                                        text = day,
-                                        style = MaterialTheme.typography.labelLarge,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (selectedDays.contains(index)) {
-                                            Color.White
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurfaceVariant
-                                        }
-                                    )
-                                }
-                            }
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(
+                                text = day,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = if (selected) Color.White
+                                else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 }
-                
-                // Custom Message
-                OutlinedTextField(
-                    value = customMessage,
-                    onValueChange = { customMessage = it },
-                    label = { Text(stringResource(R.string.custom_message)) },
+            }
+
+            // ── Section: Custom message ──────────────────────────────────────
+            SheetSectionLabel(stringResource(R.string.custom_message))
+            OutlinedTextField(
+                value = customMessage,
+                onValueChange = { customMessage = it },
+                placeholder = { Text(stringResource(R.string.notification_workout_reminder_message)) },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = false,
+                maxLines = 2,
+                shape = RoundedCornerShape(14.dp)
+            )
+
+            // ── Live preview line ────────────────────────────────────────────
+            if (selectedDays.isNotEmpty()) {
+                val dayNames = listOf("א'", "ב'", "ג'", "ד'", "ה'", "ו'", "ש'")
+                val daysSummary = selectedDays.sorted().joinToString(separator = ", ") { dayNames[it] }
+                Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = false,
-                    maxLines = 2,
-                    shape = RoundedCornerShape(12.dp)
-                )
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    val newAlarm = WorkoutAlarm(
-                        id = alarm?.id ?: UUID.randomUUID().toString(),
-                        time = selectedTime,
-                        daysOfWeek = selectedDays,
-                        isEnabled = alarm?.isEnabled ?: true,
-                        customMessage = customMessage
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+                ) {
+                    Text(
+                        text = "$daysSummary · $selectedTime",
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    onSave(newAlarm)
-                },
-                enabled = selectedDays.isNotEmpty(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFEF4444)
-                )
-            ) {
-                Text(stringResource(R.string.save), fontWeight = FontWeight.Bold)
+                }
             }
-        },
-        dismissButton = {
-            OutlinedButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel))
+
+            // ── Actions ──────────────────────────────────────────────────────
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                OutlinedButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.weight(1f).height(52.dp),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Text(stringResource(R.string.cancel))
+                }
+                Button(
+                    onClick = {
+                        val newAlarm = WorkoutAlarm(
+                            id = alarm?.id ?: UUID.randomUUID().toString(),
+                            time = selectedTime,
+                            daysOfWeek = selectedDays,
+                            isEnabled = alarm?.isEnabled ?: true,
+                            customMessage = customMessage
+                        )
+                        onSave(newAlarm)
+                    },
+                    enabled = selectedDays.isNotEmpty(),
+                    modifier = Modifier.weight(1.4f).height(52.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = accent)
+                ) {
+                    Text(stringResource(R.string.save), fontWeight = FontWeight.Bold)
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun SheetSectionLabel(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelLarge,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
     )
 }
