@@ -111,6 +111,7 @@
     <string name="confirm">אישור</string>
     <string name="cancel">ביטול</string>
     <string name="enabled_days">ימי אימון פעילים</string>
+    <string name="no_days_enabled_banner">לא הוגדרו ימי אימון. הקש כדי לעדכן בלוח הזמנים</string>
     
     <!-- Notifications -->
     <string name="notification_channel_workout_reminders">תזכורות אימון</string>
@@ -258,6 +259,9 @@
     <string name="add_to_workout">הוסף לאימון</string>
     <string name="filter_by_muscle">סנן לפי שריר</string>
     <string name="all_exercises">כל התרגילים</string>
+    <string name="search_exercises">חיפוש תרגיל…</string>
+    <string name="clear_filters">נקה סינון</string>
+    <string name="add_again">הוסף שוב</string>
     
     <!-- Manage Workout Days -->
     <string name="manage_days">ניהול ימי אימון</string>
@@ -290,6 +294,7 @@
     <string name="onboarding_feature_7">ניהול ימים גמיש</string>
     <string name="onboarding_feature_7_desc">בחר אילו ימים לכלול בשבוע שלך, כולל שישי ושבת</string>
     <string name="get_started">בואו נתחיל!</string>
+    <string name="recommended">מומלץ</string>
     <string name="next">הבא</string>
     <string name="skip">דלג</string>
     <string name="finish_setup">סיים הגדרה</string>

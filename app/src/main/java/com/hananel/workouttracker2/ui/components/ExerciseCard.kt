@@ -572,7 +572,7 @@ private fun InlineWeightInput(
     }
 }
 
-// ── Edit Dialog ───────────────────────────────────────────────────────────────
+// ── Edit Sheet (formerly AlertDialog) ─────────────────────────────────────────
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -592,77 +592,97 @@ fun ExerciseEditDialog(
             restTime.toIntOrNull() != null && restTime.toIntOrNull()!! >= 0 &&
             (!exercise.hasWeight || weight.isEmpty() || weight.toFloatOrNull() != null)
 
-    AlertDialog(
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = {
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surface
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
             Text(
                 text = stringResource(R.string.edit) + " — " + stringResource(exercise.nameResId),
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
             )
-        },
-        text = {
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+
+            OutlinedTextField(
+                value = sets,
+                onValueChange = { sets = it },
+                label = { Text(stringResource(R.string.sets)) },
+                leadingIcon = { Icon(Icons.Default.FitnessCenter, contentDescription = null) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                isError = sets.toIntOrNull()?.let { it <= 0 } != false
+            )
+            OutlinedTextField(
+                value = reps,
+                onValueChange = { reps = it },
+                label = { Text(stringResource(R.string.reps)) },
+                leadingIcon = { Icon(Icons.Default.Repeat, contentDescription = null) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                isError = reps.isBlank()
+            )
+            OutlinedTextField(
+                value = restTime,
+                onValueChange = { restTime = it },
+                label = { Text(stringResource(R.string.rest_time_seconds)) },
+                leadingIcon = { Icon(Icons.Default.Timer, contentDescription = null) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                isError = restTime.toIntOrNull()?.let { it < 0 } != false
+            )
+            if (exercise.hasWeight) {
+                OutlinedTextField(
+                    value = weight,
+                    onValueChange = { weight = it },
+                    label = { Text(stringResource(R.string.weight)) },
+                    suffix = { Text(stringResource(R.string.kg)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    isError = weight.isNotEmpty() && weight.toFloatOrNull() == null
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                OutlinedTextField(
-                    value = sets,
-                    onValueChange = { sets = it },
-                    label = { Text(stringResource(R.string.sets)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    isError = sets.toIntOrNull() == null || sets.toIntOrNull()!! <= 0
-                )
-                OutlinedTextField(
-                    value = reps,
-                    onValueChange = { reps = it },
-                    label = { Text(stringResource(R.string.reps)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    isError = reps.isBlank()
-                )
-                OutlinedTextField(
-                    value = restTime,
-                    onValueChange = { restTime = it },
-                    label = { Text(stringResource(R.string.rest_time_seconds)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    isError = restTime.toIntOrNull() == null || restTime.toIntOrNull()!! < 0
-                )
-                if (exercise.hasWeight) {
-                    OutlinedTextField(
-                        value = weight,
-                        onValueChange = { weight = it },
-                        label = { Text(stringResource(R.string.weight)) },
-                        suffix = { Text(stringResource(R.string.kg)) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        isError = weight.isNotEmpty() && weight.toFloatOrNull() == null
-                    )
+                OutlinedButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.weight(1f).height(52.dp),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Text(stringResource(R.string.cancel))
+                }
+                Button(
+                    onClick = {
+                        if (isValid) {
+                            onSave(sets.toInt(), reps, restTime.toInt(), weight.toFloatOrNull() ?: 0f)
+                            onDismiss()
+                        }
+                    },
+                    enabled = isValid,
+                    modifier = Modifier.weight(1.4f).height(52.dp),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Text(stringResource(R.string.save), fontWeight = FontWeight.Bold)
                 }
             }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    if (isValid) {
-                        onSave(sets.toInt(), reps, restTime.toInt(), weight.toFloatOrNull() ?: 0f)
-                        onDismiss()
-                    }
-                },
-                enabled = isValid
-            ) {
-                Text(stringResource(R.string.save), fontWeight = FontWeight.Bold)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel))
-            }
         }
-    )
+    }
 }

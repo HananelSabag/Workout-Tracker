@@ -111,6 +111,7 @@
     <string name="confirm">Confirm</string>
     <string name="cancel">Cancel</string>
     <string name="enabled_days">Enabled Workout Days</string>
+    <string name="no_days_enabled_banner">No training days set. Tap to update your schedule</string>
     
     <!-- Notifications -->
     <string name="notification_channel_workout_reminders">Workout Reminders</string>
@@ -258,6 +259,9 @@
     <string name="add_to_workout">Add to Workout</string>
     <string name="filter_by_muscle">Filter by Muscle</string>
     <string name="all_exercises">All Exercises</string>
+    <string name="search_exercises">Search exercises…</string>
+    <string name="clear_filters">Clear filters</string>
+    <string name="add_again">Add again</string>
     
     <!-- Manage Workout Days -->
     <string name="manage_days">Manage Workout Days</string>
@@ -290,6 +294,7 @@
     <string name="onboarding_feature_7">Flexible day management</string>
     <string name="onboarding_feature_7_desc">Choose which days to include in your week, including Friday and Saturday</string>
     <string name="get_started">Let\'s Get Started!</string>
+    <string name="recommended">Recommended</string>
     <string name="next">Next</string>
     <string name="skip">Skip</string>
     <string name="finish_setup">Finish Setup</string>

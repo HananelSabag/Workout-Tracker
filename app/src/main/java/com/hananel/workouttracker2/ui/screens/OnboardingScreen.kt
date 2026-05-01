@@ -20,6 +20,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -131,7 +132,9 @@ private fun OnboardingPage1(
         )
     }
 
-    var hasRequestedPermission by remember { mutableStateOf(false) }
+    // rememberSaveable so a config change (rotation, language switch) doesn't trigger a second
+    // permission popup behind the user's back.
+    var hasRequestedPermission by rememberSaveable { mutableStateOf(false) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -462,64 +465,78 @@ private fun OnboardingPage2(
                 
                 Spacer(modifier = Modifier.height(8.dp))
                 
-                // Default Program Option
-                ElevatedCard(
+                // Default Program Option — emphasized as the recommended path with a primary
+                // tint and a "Recommended" badge so first-time users default to a working setup.
+                Card(
                     modifier = Modifier.fillMaxWidth(),
                     onClick = {
                         scope.launch {
                             // CRITICAL: Clear ALL stale data first
                             // This fixes issues with cloud backup restoring old timer state/progress
                             repository.clearAllProgressAndTimerState()
-                            
-                            // Load default workout structure
                             val defaultStructure = DefaultData.getDefaultWorkoutStructure()
                             repository.saveWorkoutStructure(defaultStructure)
                             onFinish()
                         }
-                    }
+                    },
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(20.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = null,
-                            modifier = Modifier.size(36.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = Color.White.copy(alpha = 0.22f)
                         ) {
                             Text(
-                                text = stringResource(R.string.use_default_program),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
+                                text = stringResource(R.string.recommended),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                             )
-                            Text(
-                                text = stringResource(R.string.use_default_program_desc),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                        }
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Bolt,
+                                contentDescription = null,
+                                modifier = Modifier.size(40.dp),
+                                tint = Color.White
                             )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = stringResource(R.string.use_default_program),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = Color.White
+                                )
+                                Text(
+                                    text = stringResource(R.string.use_default_program_desc),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color.White.copy(alpha = 0.85f)
+                                )
+                            }
                         }
                     }
                 }
-                
-                // Customize Option
-                ElevatedCard(
+
+                // Customize Option — secondary visual weight (outlined)
+                OutlinedCard(
                     modifier = Modifier.fillMaxWidth(),
-                    onClick = {
-                        showWorkoutBuilder = true
-                    }
+                    onClick = { showWorkoutBuilder = true },
+                    shape = RoundedCornerShape(20.dp)
                 ) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(20.dp),
+                        modifier = Modifier.fillMaxWidth().padding(20.dp),
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -529,10 +546,7 @@ private fun OnboardingPage2(
                             modifier = Modifier.size(36.dp),
                             tint = MaterialTheme.colorScheme.primary
                         )
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = stringResource(R.string.customize_workouts),
                                 style = MaterialTheme.typography.titleMedium,

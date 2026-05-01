@@ -35,8 +35,27 @@ class WorkoutViewModel(
     
     init {
         validateAndClearStaleTimerState()
+        runAutoResetIfNeeded()
         loadData()
         setInitialDay()
+    }
+
+    /**
+     * If the user enabled auto-reset and the persisted week-start no longer matches the current
+     * one, reset progress automatically. Without this, the toggle in Settings did nothing — the
+     * resetWeeklyProgress() function existed but was only invoked from a manual button.
+     */
+    private fun runAutoResetIfNeeded() {
+        viewModelScope.launch {
+            val prefs = repository.getUserPreferences()
+            if (!prefs.autoResetWeekly) return@launch
+
+            val progress = repository.getWorkoutProgress()
+            val currentWeekStart = DateUtils.getCurrentWeekStart()
+            if (progress.weekStartDate != currentWeekStart) {
+                repository.resetWeeklyProgress()
+            }
+        }
     }
     
     /**
