@@ -126,9 +126,11 @@ class TimerService : Service() {
                 )
             }
             ACTION_NEXT_SET -> {
+                ensureStateRestored()
                 handleNextSet()
             }
             ACTION_SKIP_REST -> {
+                ensureStateRestored()
                 handleNextSet()
             }
             ACTION_PAUSE_RESUME -> {
@@ -139,6 +141,19 @@ class TimerService : Service() {
         return START_STICKY
     }
     
+    /**
+     * If the service was killed and just relaunched (e.g. user tapped "Next Set" on the
+     * rest-complete notification while the process was dead), `currentTimerState` is null in memory
+     * but DataStore still has the latest persisted state. Restore it so handleNextSet() can run.
+     */
+    private fun ensureStateRestored() {
+        if (currentTimerState != null) return
+        val persisted = runBlocking { repository?.getTimerState() }
+        if (persisted != null) {
+            currentTimerState = persisted
+        }
+    }
+
     private fun handlePauseResume() {
         if (isPaused) {
             // Resume: start countdown with paused time
@@ -197,11 +212,15 @@ class TimerService : Service() {
             exerciseId = exerciseId,
             currentSet = currentSet,
             totalSets = totalSets,
-            completedSets = completedSets
+            completedSets = completedSets,
+            isRestComplete = false
         )
-        
-        // Save initial state
-        serviceScope.launch {
+
+        // Save initial state synchronously so the UI never reads a stale "rest complete" flag from a
+        // previous set when a new countdown is starting. The single runBlocking call is fast (writes
+        // a small JSON to DataStore) and prevents a race where handleNextSet → startTimerCountdown
+        // returns before the OFF-flag is persisted.
+        runBlocking {
             repository?.saveTimerState(currentTimerState)
         }
         
@@ -264,10 +283,16 @@ class TimerService : Service() {
                 // Show completion notification with sound to alert user
                 showCompletionNotification()
                 
-                // Update state to show timer completed but waiting for user action
-                // Mark as NOT running so user knows rest is over
-                currentTimerState = state.copy(timeLeft = 0, isRunning = false)
-                serviceScope.launch {
+                // Update state to show timer completed but waiting for user action.
+                // Persist synchronously — if the service is killed by the OS right after the rest
+                // finishes, the next launch must read isRestComplete=true from DataStore so the UI
+                // shows "Start Next Set" instead of stale "Resume Rest".
+                currentTimerState = state.copy(
+                    timeLeft = 0,
+                    isRunning = false,
+                    isRestComplete = true
+                )
+                runBlocking {
                     repository?.saveTimerState(currentTimerState)
                 }
                 
@@ -541,16 +566,12 @@ class TimerService : Service() {
         countDownTimer?.cancel()
         countDownTimer = null
         currentTimerState = null
-        
-        // Clear timer state from DataStore when service is destroyed
-        serviceScope.launch {
-            try {
-                repository?.saveTimerState(null)
-            } catch (e: Exception) {
-                // Ignore - service is being destroyed
-            }
-        }
-        
+
+        // Do NOT clear the persisted timer state here. onDestroy fires for both intentional stops
+        // (in which case stopTimerAndCleanup already synchronously cleared DataStore) and for OS
+        // process-kills mid-workout. In the second case wiping DataStore would lose the rest-
+        // complete recovery state — when the user re-opens the app they'd see no timer at all.
+
         serviceScope.cancel()
     }
 }

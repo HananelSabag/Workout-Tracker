@@ -87,7 +87,9 @@ private fun TimerBottomSheetContent(
 ) {
     val timeLeft = timerState.timeLeft
     val isLastSet = timerState.currentSet >= timerState.totalSets
-    val isRestComplete = timeLeft == 0
+    // Trust the explicit flag from the service. Falls back to the legacy condition for any
+    // TimerState persisted before isRestComplete was introduced.
+    val isRestComplete = timerState.isRestComplete || (timeLeft == 0 && !timerState.isRunning)
 
     // Smooth color transition: blue (running) → green (complete)
     val accentColor by animateColorAsState(

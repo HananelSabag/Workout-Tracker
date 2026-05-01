@@ -46,9 +46,8 @@ fun SettingsScreen(
     
     var preferences by remember { mutableStateOf(UserPreferences()) }
     var showResetDialog by remember { mutableStateOf(false) }
-    var showLanguageDialog by remember { mutableStateOf(false) }
-    var showThemeDialog by remember { mutableStateOf(false) }
     var showWorkoutBuilder by remember { mutableStateOf(false) }
+    var showScheduleSheet by remember { mutableStateOf(false) }
     
     LaunchedEffect(Unit) {
         repository.getUserPreferencesFlow().collect { prefs ->
@@ -149,25 +148,46 @@ fun SettingsScreen(
                 }
             }
 
-            // Appearance Section
+            // Appearance Section — language + theme as inline segmented buttons (no more dialogs)
             item {
                 SettingsSection(title = stringResource(R.string.general)) {
-                    SettingsItem(
+                    InlineSegmentedSetting(
                         icon = Icons.Outlined.Language,
                         iconColor = Color(0xFF3B82F6),
                         title = stringResource(R.string.language),
-                        subtitle = getLanguageDisplayName(preferences.language),
-                        onClick = { showLanguageDialog = true }
+                        options = listOf("system", "he", "en"),
+                        labels = listOf(
+                            stringResource(R.string.language_system),
+                            stringResource(R.string.language_hebrew),
+                            stringResource(R.string.language_english)
+                        ),
+                        selected = preferences.language,
+                        onSelect = { lang ->
+                            scope.launch {
+                                repository.saveUserPreferences(preferences.copy(language = lang))
+                                (context as? Activity)?.recreate()
+                            }
+                        }
                     )
-                    
+
                     HorizontalDivider(modifier = Modifier.padding(start = 56.dp))
-                    
-                    SettingsItem(
+
+                    InlineSegmentedSetting(
                         icon = Icons.Outlined.Palette,
                         iconColor = Color(0xFF8B5CF6),
                         title = stringResource(R.string.theme),
-                        subtitle = getThemeDisplayName(preferences.theme),
-                        onClick = { showThemeDialog = true }
+                        options = listOf("SYSTEM", "LIGHT", "DARK"),
+                        labels = listOf(
+                            stringResource(R.string.theme_system),
+                            stringResource(R.string.theme_light),
+                            stringResource(R.string.theme_dark)
+                        ),
+                        selected = preferences.theme,
+                        onSelect = { theme ->
+                            scope.launch {
+                                repository.saveUserPreferences(preferences.copy(theme = theme))
+                            }
+                        }
                     )
                 }
             }
@@ -228,15 +248,25 @@ fun SettingsScreen(
             item {
                 SettingsSection(title = stringResource(R.string.workout)) {
                     SettingsItem(
+                        icon = Icons.Outlined.CalendarMonth,
+                        iconColor = Color(0xFF22C55E),
+                        title = stringResource(R.string.workout_schedule_title),
+                        subtitle = scheduleSubtitle(preferences.enabledDays),
+                        onClick = { showScheduleSheet = true }
+                    )
+
+                    HorizontalDivider(modifier = Modifier.padding(start = 56.dp))
+
+                    SettingsItem(
                         icon = Icons.Outlined.FitnessCenter,
                         iconColor = Color(0xFF06B6D4),
                         title = stringResource(R.string.manage_workout_builder),
                         subtitle = stringResource(R.string.manage_days_desc),
                         onClick = { showWorkoutBuilder = true }
                     )
-                    
+
                     HorizontalDivider(modifier = Modifier.padding(start = 56.dp))
-                    
+
                     SettingsItem(
                         icon = Icons.Outlined.RestartAlt,
                         iconColor = Color(0xFFEF4444),
@@ -295,151 +325,23 @@ fun SettingsScreen(
         }
     }
     
-    // Language Selection Dialog
-    if (showLanguageDialog) {
-        AlertDialog(
-            onDismissRequest = { showLanguageDialog = false },
-            title = { 
-                Text(
-                    stringResource(R.string.language),
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    listOf("system", "he", "en").forEach { lang ->
-                        Surface(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .clickable {
-                                    scope.launch {
-                                        repository.saveUserPreferences(
-                                            preferences.copy(language = lang)
-                                        )
-                                        showLanguageDialog = false
-                                        (context as? Activity)?.recreate()
-                                    }
-                                },
-                            color = if (preferences.language == lang) {
-                                MaterialTheme.colorScheme.primaryContainer
-                            } else {
-                                Color.Transparent
-                            },
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = getLanguageDisplayName(lang),
-                                    fontWeight = if (preferences.language == lang) FontWeight.Bold else FontWeight.Normal
-                                )
-                                if (preferences.language == lang) {
-                                    Icon(
-                                        Icons.Default.Check,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showLanguageDialog = false }) {
-                    Text(stringResource(R.string.cancel))
+    // Workout Schedule bottom sheet — pick which weekdays you train. Doesn't change the workout
+    // structure itself (that's the workout builder); only the visible days in the day selector.
+    if (showScheduleSheet) {
+        WorkoutScheduleSheet(
+            currentDays = preferences.enabledDays.toSet(),
+            onDismiss = { showScheduleSheet = false },
+            onSave = { newDays ->
+                scope.launch {
+                    repository.saveUserPreferences(
+                        preferences.copy(enabledDays = newDays.sorted())
+                    )
+                    showScheduleSheet = false
                 }
             }
         )
     }
-    
-    // Theme Selection Dialog
-    if (showThemeDialog) {
-        AlertDialog(
-            onDismissRequest = { showThemeDialog = false },
-            title = { 
-                Text(
-                    stringResource(R.string.theme),
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    listOf("SYSTEM", "LIGHT", "DARK").forEach { theme ->
-                        Surface(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .clickable {
-                                    scope.launch {
-                                        repository.saveUserPreferences(
-                                            preferences.copy(theme = theme)
-                                        )
-                                        showThemeDialog = false
-                                    }
-                                },
-                            color = if (preferences.theme == theme) {
-                                MaterialTheme.colorScheme.primaryContainer
-                            } else {
-                                Color.Transparent
-                            },
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        imageVector = when(theme) {
-                                            "LIGHT" -> Icons.Outlined.LightMode
-                                            "DARK" -> Icons.Outlined.DarkMode
-                                            else -> Icons.Outlined.Brightness6
-                                        },
-                                        contentDescription = null,
-                                        tint = if (preferences.theme == theme) {
-                                            MaterialTheme.colorScheme.primary
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurfaceVariant
-                                        }
-                                    )
-                                    Text(
-                                        text = getThemeDisplayName(theme),
-                                        fontWeight = if (preferences.theme == theme) FontWeight.Bold else FontWeight.Normal
-                                    )
-                                }
-                                if (preferences.theme == theme) {
-                                    Icon(
-                                        Icons.Default.Check,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showThemeDialog = false }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            }
-        )
-    }
-    
+
     // Reset Confirmation Dialog
     if (showResetDialog) {
         AlertDialog(
@@ -621,20 +523,222 @@ private fun SettingsToggleItem(
     }
 }
 
+/**
+ * A settings row with the standard icon + title on the left, and a Material3 SegmentedButton on
+ * the right (or below on narrow screens) for picking between a small fixed set of options. Used
+ * for language and theme — replaces the old AlertDialog selectors.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun getLanguageDisplayName(lang: String): String {
-    return when (lang) {
-        "he" -> stringResource(R.string.language_hebrew)
-        "en" -> stringResource(R.string.language_english)
-        else -> stringResource(R.string.language_system)
+private fun InlineSegmentedSetting(
+    icon: ImageVector,
+    iconColor: Color,
+    title: String,
+    options: List<String>,
+    labels: List<String>,
+    selected: String,
+    onSelect: (String) -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(iconColor.copy(alpha = 0.1f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = iconColor,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium
+            )
+        }
+        Spacer(Modifier.height(10.dp))
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            options.forEachIndexed { index, value ->
+                SegmentedButton(
+                    selected = selected == value,
+                    onClick = { onSelect(value) },
+                    shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size)
+                ) {
+                    Text(
+                        text = labels[index],
+                        fontWeight = if (selected == value) FontWeight.Bold else FontWeight.Medium
+                    )
+                }
+            }
+        }
     }
 }
 
 @Composable
-private fun getThemeDisplayName(theme: String): String {
-    return when (theme) {
-        "LIGHT" -> stringResource(R.string.theme_light)
-        "DARK" -> stringResource(R.string.theme_dark)
-        else -> stringResource(R.string.theme_system)
+private fun scheduleSubtitle(enabledDays: List<Int>): String {
+    if (enabledDays.isEmpty()) return stringResource(R.string.workout_schedule_none)
+    val short = listOf(
+        R.string.sunday_short, R.string.monday_short, R.string.tuesday_short,
+        R.string.wednesday_short, R.string.thursday_short, R.string.friday_short,
+        R.string.saturday_short
+    )
+    val names = enabledDays.sorted().joinToString(", ") { stringResource(short[it]) }
+    return stringResource(R.string.workout_schedule_summary, enabledDays.size, names)
+}
+
+/**
+ * Bottom sheet for picking which weekdays the user trains. Lets the user explicitly say "I train
+ * Sun/Tue/Thu" without going through the full workout builder. Saves to UserPreferences.enabledDays
+ * which the day selector at the top of the workout screen reads from.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun WorkoutScheduleSheet(
+    currentDays: Set<Int>,
+    onDismiss: () -> Unit,
+    onSave: (Set<Int>) -> Unit
+) {
+    var selected by remember { mutableStateOf(currentDays) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    val dayLabels = listOf(
+        stringResource(R.string.day_sunday),
+        stringResource(R.string.day_monday),
+        stringResource(R.string.day_tuesday),
+        stringResource(R.string.day_wednesday),
+        stringResource(R.string.day_thursday),
+        stringResource(R.string.day_friday),
+        stringResource(R.string.day_saturday)
+    )
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surface
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(Color(0xFF22C55E).copy(alpha = 0.15f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Outlined.CalendarMonth,
+                        contentDescription = null,
+                        tint = Color(0xFF16A34A),
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+                Column {
+                    Text(
+                        text = stringResource(R.string.workout_schedule_title),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = stringResource(R.string.workout_schedule_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            // Quick presets so users don't have to tap 4 times for the common cases.
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                val presets = listOf(
+                    stringResource(R.string.preset_3day_odd) to setOf(0, 2, 4),  // Sun, Tue, Thu
+                    stringResource(R.string.preset_3day_even) to setOf(1, 3, 5), // Mon, Wed, Fri
+                    stringResource(R.string.preset_4day) to setOf(0, 1, 3, 4),
+                    stringResource(R.string.preset_5day) to setOf(0, 1, 2, 3, 4)
+                )
+                presets.forEach { (label, days) ->
+                    AssistChip(
+                        onClick = { selected = days },
+                        label = { Text(label) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+
+            // Per-day toggles with full names so the user can't be confused.
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                dayLabels.forEachIndexed { index, label ->
+                    val checked = selected.contains(index)
+                    Surface(
+                        onClick = {
+                            selected = if (checked) selected - index else selected + index
+                        },
+                        shape = RoundedCornerShape(14.dp),
+                        color = if (checked) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = if (checked) FontWeight.Bold else FontWeight.Medium,
+                                color = if (checked) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurface
+                            )
+                            Checkbox(
+                                checked = checked,
+                                onCheckedChange = {
+                                    selected = if (checked) selected - index else selected + index
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                OutlinedButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.weight(1f).height(52.dp),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Text(stringResource(R.string.cancel))
+                }
+                Button(
+                    onClick = { onSave(selected) },
+                    enabled = selected.isNotEmpty(),
+                    modifier = Modifier.weight(1.4f).height(52.dp),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Text(stringResource(R.string.save), fontWeight = FontWeight.Bold)
+                }
+            }
+        }
     }
 }

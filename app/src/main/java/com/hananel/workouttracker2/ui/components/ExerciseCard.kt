@@ -66,6 +66,8 @@ fun ExerciseCard(
     onToggleComplete: () -> Unit,
     onEditExercise: ((sets: Int, reps: String, restTime: Int, weight: Float) -> Unit)? = null,
     onDeleteExercise: (() -> Unit)? = null,
+    isRestCompleteForThis: Boolean = false,
+    isRestRunningForThis: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var showEditDialog  by remember { mutableStateOf(false) }
@@ -259,6 +261,8 @@ fun ExerciseCard(
                         isCompleted   = isCompleted,
                         completedSets = completedSets,
                         totalSets     = exercise.sets,
+                        isRestCompleteForThis = isRestCompleteForThis,
+                        isRestRunningForThis  = isRestRunningForThis,
                         onClick       = onStartRest,
                         modifier      = Modifier.fillMaxWidth()
                     )
@@ -464,18 +468,27 @@ private fun ExerciseActionButton(
     isCompleted: Boolean,
     completedSets: Int,
     totalSets: Int,
+    isRestCompleteForThis: Boolean,
+    isRestRunningForThis: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val bgColor by animateColorAsState(
-        targetValue = if (isCompleted) Green500 else Blue500,
+        targetValue = when {
+            isCompleted            -> Green500
+            isRestCompleteForThis  -> Green500
+            else                   -> Blue500
+        },
         animationSpec = tween(300),
         label = "btnBg"
     )
 
     Button(
         onClick = onClick,
-        enabled = !isCompleted && completedSets < totalSets,
+        // Disable while a rest countdown is actively running for THIS exercise so the user can't
+        // double-tap; but keep enabled when isRestComplete so they can advance the timer right
+        // from the card without opening the sheet.
+        enabled = !isCompleted && completedSets < totalSets && !isRestRunningForThis,
         modifier = modifier.height(50.dp),
         shape = RoundedCornerShape(14.dp),
         colors = ButtonDefaults.buttonColors(
@@ -485,16 +498,22 @@ private fun ExerciseActionButton(
         elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
     ) {
         Icon(
-            imageVector = if (isCompleted) Icons.Default.Check else Icons.Default.PlayArrow,
+            imageVector = when {
+                isCompleted           -> Icons.Default.Check
+                isRestCompleteForThis -> Icons.Default.SkipNext
+                else                  -> Icons.Default.PlayArrow
+            },
             contentDescription = null,
             modifier = Modifier.size(20.dp)
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = when {
-                isCompleted       -> stringResource(R.string.finished)
-                completedSets > 0 -> stringResource(R.string.resume_rest)
-                else              -> stringResource(R.string.start_rest)
+                isCompleted           -> stringResource(R.string.finished)
+                isRestCompleteForThis -> stringResource(R.string.start_next_set)
+                isRestRunningForThis  -> stringResource(R.string.resume_rest)
+                completedSets > 0     -> stringResource(R.string.resume_rest)
+                else                  -> stringResource(R.string.start_rest)
             },
             fontWeight = FontWeight.Bold,
             fontSize = 15.sp
@@ -553,7 +572,7 @@ private fun InlineWeightInput(
     }
 }
 
-// ── Edit Dialog ───────────────────────────────────────────────────────────────
+// ── Edit Sheet (formerly AlertDialog) ─────────────────────────────────────────
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -573,77 +592,97 @@ fun ExerciseEditDialog(
             restTime.toIntOrNull() != null && restTime.toIntOrNull()!! >= 0 &&
             (!exercise.hasWeight || weight.isEmpty() || weight.toFloatOrNull() != null)
 
-    AlertDialog(
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = {
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surface
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
             Text(
                 text = stringResource(R.string.edit) + " — " + stringResource(exercise.nameResId),
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
             )
-        },
-        text = {
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+
+            OutlinedTextField(
+                value = sets,
+                onValueChange = { sets = it },
+                label = { Text(stringResource(R.string.sets)) },
+                leadingIcon = { Icon(Icons.Default.FitnessCenter, contentDescription = null) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                isError = sets.toIntOrNull()?.let { it <= 0 } != false
+            )
+            OutlinedTextField(
+                value = reps,
+                onValueChange = { reps = it },
+                label = { Text(stringResource(R.string.reps)) },
+                leadingIcon = { Icon(Icons.Default.Repeat, contentDescription = null) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                isError = reps.isBlank()
+            )
+            OutlinedTextField(
+                value = restTime,
+                onValueChange = { restTime = it },
+                label = { Text(stringResource(R.string.rest_time_seconds)) },
+                leadingIcon = { Icon(Icons.Default.Timer, contentDescription = null) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                isError = restTime.toIntOrNull()?.let { it < 0 } != false
+            )
+            if (exercise.hasWeight) {
+                OutlinedTextField(
+                    value = weight,
+                    onValueChange = { weight = it },
+                    label = { Text(stringResource(R.string.weight)) },
+                    suffix = { Text(stringResource(R.string.kg)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    isError = weight.isNotEmpty() && weight.toFloatOrNull() == null
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                OutlinedTextField(
-                    value = sets,
-                    onValueChange = { sets = it },
-                    label = { Text(stringResource(R.string.sets)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    isError = sets.toIntOrNull() == null || sets.toIntOrNull()!! <= 0
-                )
-                OutlinedTextField(
-                    value = reps,
-                    onValueChange = { reps = it },
-                    label = { Text(stringResource(R.string.reps)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    isError = reps.isBlank()
-                )
-                OutlinedTextField(
-                    value = restTime,
-                    onValueChange = { restTime = it },
-                    label = { Text(stringResource(R.string.rest_time_seconds)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    isError = restTime.toIntOrNull() == null || restTime.toIntOrNull()!! < 0
-                )
-                if (exercise.hasWeight) {
-                    OutlinedTextField(
-                        value = weight,
-                        onValueChange = { weight = it },
-                        label = { Text(stringResource(R.string.weight)) },
-                        suffix = { Text(stringResource(R.string.kg)) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        isError = weight.isNotEmpty() && weight.toFloatOrNull() == null
-                    )
+                OutlinedButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.weight(1f).height(52.dp),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Text(stringResource(R.string.cancel))
+                }
+                Button(
+                    onClick = {
+                        if (isValid) {
+                            onSave(sets.toInt(), reps, restTime.toInt(), weight.toFloatOrNull() ?: 0f)
+                            onDismiss()
+                        }
+                    },
+                    enabled = isValid,
+                    modifier = Modifier.weight(1.4f).height(52.dp),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Text(stringResource(R.string.save), fontWeight = FontWeight.Bold)
                 }
             }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    if (isValid) {
-                        onSave(sets.toInt(), reps, restTime.toInt(), weight.toFloatOrNull() ?: 0f)
-                        onDismiss()
-                    }
-                },
-                enabled = isValid
-            ) {
-                Text(stringResource(R.string.save), fontWeight = FontWeight.Bold)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel))
-            }
         }
-    )
+    }
 }

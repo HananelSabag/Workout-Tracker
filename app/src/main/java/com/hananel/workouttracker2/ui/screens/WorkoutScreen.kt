@@ -3,10 +3,12 @@ package com.hananel.workouttracker2.ui.screens
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -83,15 +85,24 @@ fun WorkoutScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    // Auto-open timer sheet ONLY when a NEW timer starts (exerciseId or currentSet key changes)
-    LaunchedEffect(timerState?.exerciseId, timerState?.currentSet) {
+    // Auto-open timer sheet when:
+    //  - a NEW countdown starts (key on exerciseId+currentSet), OR
+    //  - the user re-enters the app and rest is already complete (isRestComplete flips to true).
+    // Without the second key, a user who left the app during rest and returns AFTER the rest
+    // finished would see only the banner with no clear way to advance — the sheet exposes the big
+    // "Start Next Set" action.
+    LaunchedEffect(
+        timerState?.exerciseId,
+        timerState?.currentSet,
+        timerState?.isRestComplete
+    ) {
         val currentTimerState = timerState
         when {
             currentTimerState == null -> {
                 showTimerSheet = false
                 userClosedSheet = false
             }
-            currentTimerState.isRunning && !userClosedSheet -> {
+            (currentTimerState.isRunning || currentTimerState.isRestComplete) && !userClosedSheet -> {
                 showTimerSheet = true
             }
         }
@@ -139,12 +150,14 @@ fun WorkoutScreen(
                     }
                 },
                 actions = {
+                    // Uniform tonal style across all 3 actions — prior version mixed three different
+                    // background colors which made the bar feel cluttered. Each action keeps its
+                    // tinted icon for recognizability.
+                    val actionContainer = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
                     FilledTonalIconButton(
                         onClick = { showResetDialog = true },
-                        modifier = Modifier.size(36.dp),
-                        colors = IconButtonDefaults.filledTonalIconButtonColors(
-                            containerColor = Color(0xFF3B82F6).copy(alpha = 0.1f)
-                        )
+                        modifier = Modifier.size(38.dp),
+                        colors = IconButtonDefaults.filledTonalIconButtonColors(containerColor = actionContainer)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Refresh,
@@ -153,15 +166,11 @@ fun WorkoutScreen(
                             modifier = Modifier.size(20.dp)
                         )
                     }
-
-                    Spacer(modifier = Modifier.width(4.dp))
-
+                    Spacer(modifier = Modifier.width(6.dp))
                     FilledTonalIconButton(
                         onClick = onNavigateToAlarms,
-                        modifier = Modifier.size(36.dp),
-                        colors = IconButtonDefaults.filledTonalIconButtonColors(
-                            containerColor = Color(0xFFEF4444).copy(alpha = 0.1f)
-                        )
+                        modifier = Modifier.size(38.dp),
+                        colors = IconButtonDefaults.filledTonalIconButtonColors(containerColor = actionContainer)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Notifications,
@@ -170,15 +179,11 @@ fun WorkoutScreen(
                             modifier = Modifier.size(20.dp)
                         )
                     }
-
-                    Spacer(modifier = Modifier.width(4.dp))
-
+                    Spacer(modifier = Modifier.width(6.dp))
                     FilledTonalIconButton(
                         onClick = onNavigateToSettings,
-                        modifier = Modifier.size(36.dp),
-                        colors = IconButtonDefaults.filledTonalIconButtonColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                        )
+                        modifier = Modifier.size(38.dp),
+                        colors = IconButtonDefaults.filledTonalIconButtonColors(containerColor = actionContainer)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Settings,
@@ -206,16 +211,54 @@ fun WorkoutScreen(
                 .padding(paddingValues)
         ) {
             if (workoutDays.isNotEmpty()) {
-                DaySelector(
-                    selectedDayIndex = selectedDayIndex,
-                    enabledDays = enabledDays,
-                    onDaySelected = { viewModel.selectDay(it) }
-                )
+                if (enabledDays.isEmpty()) {
+                    // User disabled every weekday in Settings → DaySelector would render nothing,
+                    // and the screen would silently fall through to the "Rest day" empty state with
+                    // no clear way back. Show an explicit banner with a CTA into Settings.
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        color = Color(0xFFFFFBEB),
+                        tonalElevation = 1.dp
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onNavigateToSettings() }
+                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = null,
+                                tint = Color(0xFFB45309)
+                            )
+                            Text(
+                                text = stringResource(R.string.no_days_enabled_banner),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFF92400E),
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                } else {
+                    DaySelector(
+                        selectedDayIndex = selectedDayIndex,
+                        enabledDays = enabledDays,
+                        onDaySelected = { viewModel.selectDay(it) }
+                    )
+                }
             }
 
             // ── Timer Running Banner ──────────────────────────────────────────
             timerState?.let { state ->
-                val isRestComplete = !state.isRunning && state.timeLeft == 0
+                // Use the explicit flag from the service. Falls back to the inferred condition for
+                // states persisted by older versions before the flag existed.
+                val isRestComplete = state.isRestComplete || (!state.isRunning && state.timeLeft == 0)
 
                 val bannerBg by animateColorAsState(
                     targetValue = if (isRestComplete) Color(0xFFDCFCE7) else Color(0xFFFFF7ED),
@@ -413,35 +456,21 @@ fun WorkoutScreen(
                         }
 
                         if (showEditDialog) {
-                            var dayName by remember { mutableStateOf(currentWorkout.customName) }
-                            AlertDialog(
-                                onDismissRequest = { showEditDialog = false },
-                                title = { Text(stringResource(R.string.rename_day)) },
-                                text = {
-                                    OutlinedTextField(
-                                        value = dayName,
-                                        onValueChange = { dayName = it },
-                                        label = { Text(stringResource(R.string.workout_title)) },
-                                        singleLine = true,
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
-                                },
-                                confirmButton = {
-                                    TextButton(onClick = {
-                                        viewModel.renameWorkoutDay(currentWorkout.id, dayName)
-                                        showEditDialog = false
-                                    }) { Text(stringResource(R.string.save)) }
-                                },
-                                dismissButton = {
-                                    TextButton(onClick = { showEditDialog = false }) {
-                                        Text(stringResource(R.string.cancel))
-                                    }
+                            RenameDaySheet(
+                                initialName = currentWorkout.customName,
+                                onDismiss = { showEditDialog = false },
+                                onSave = { newName ->
+                                    viewModel.renameWorkoutDay(currentWorkout.id, newName)
+                                    showEditDialog = false
                                 }
                             )
                         }
                     }
 
-                    items(currentWorkout.exercises, key = { it.id }) { exercise ->
+                    // Compound key — exercise IDs include a timestamp suffix and could (very rarely)
+                    // collide across days when items are added back-to-back. Pairing with the day
+                    // ID guarantees identity even in that edge case.
+                    items(currentWorkout.exercises, key = { "${currentWorkout.id}_${it.id}" }) { exercise ->
                         val isCompleted = remember(workoutProgress) {
                             workoutProgress?.completedExercises?.get(exercise.id) ?: false
                         }
@@ -454,25 +483,45 @@ fun WorkoutScreen(
                             workoutProgress?.exerciseWeights?.get(exercise.id) ?: 0f
                         }
 
+                        val activeTimer = timerState
+                        // True when this card's exercise is the one the timer is currently
+                        // associated with AND the rest already finished — the action button should
+                        // say "Start Next Set" and tapping it advances the same timer.
+                        val isRestCompleteForThis = activeTimer != null
+                            && activeTimer.exerciseId == exercise.id
+                            && (activeTimer.isRestComplete || (!activeTimer.isRunning && activeTimer.timeLeft == 0))
+                        // True while the rest countdown is actively running for THIS exercise —
+                        // disables the start button to prevent double-starts.
+                        val isRestRunningForThis = activeTimer != null
+                            && activeTimer.exerciseId == exercise.id
+                            && activeTimer.isRunning
+
                         ExerciseCard(
                             exercise = exercise,
                             isCompleted = isCompleted,
                             completedSets = completedSets,
                             weight = weight,
+                            isRestCompleteForThis = isRestCompleteForThis,
+                            isRestRunningForThis = isRestRunningForThis,
                             onWeightChange = { viewModel.updateExerciseWeight(exercise.id, it) },
                             onStartRest = {
-                                if (timerState == null) {
-                                    viewModel.startTimer(exercise, context)
-                                } else {
-                                    scope.launch {
-                                        val result = snackbarHostState.showSnackbar(
-                                            message = context.getString(R.string.timer_already_running),
-                                            actionLabel = context.getString(R.string.timer_view_action),
-                                            duration = SnackbarDuration.Long
-                                        )
-                                        if (result == SnackbarResult.ActionPerformed) {
-                                            userClosedSheet = false
-                                            showTimerSheet = true
+                                when {
+                                    isRestCompleteForThis -> {
+                                        // Rest already finished for this exercise — advance the timer.
+                                        viewModel.completeSet(context)
+                                    }
+                                    activeTimer == null -> viewModel.startTimer(exercise, context)
+                                    else -> {
+                                        scope.launch {
+                                            val result = snackbarHostState.showSnackbar(
+                                                message = context.getString(R.string.timer_already_running),
+                                                actionLabel = context.getString(R.string.timer_view_action),
+                                                duration = SnackbarDuration.Long
+                                            )
+                                            if (result == SnackbarResult.ActionPerformed) {
+                                                userClosedSheet = false
+                                                showTimerSheet = true
+                                            }
                                         }
                                     }
                                 }
@@ -615,21 +664,147 @@ fun WorkoutScreen(
         }
 
         if (showResetDialog) {
-            AlertDialog(
-                onDismissRequest = { showResetDialog = false },
-                title = { Text(stringResource(R.string.reset_confirmation)) },
-                text = { Text(stringResource(R.string.reset_confirmation_message)) },
-                confirmButton = {
-                    TextButton(onClick = { onResetWeekly(); showResetDialog = false }) {
-                        Text(stringResource(R.string.confirm))
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showResetDialog = false }) {
-                        Text(stringResource(R.string.cancel))
-                    }
+            ResetWeekSheet(
+                onDismiss = { showResetDialog = false },
+                onConfirm = {
+                    onResetWeekly()
+                    showResetDialog = false
                 }
             )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun RenameDaySheet(
+    initialName: String,
+    onDismiss: () -> Unit,
+    onSave: (String) -> Unit
+) {
+    var dayName by remember { mutableStateOf(initialName) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surface
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.rename_day),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+            OutlinedTextField(
+                value = dayName,
+                onValueChange = { dayName = it },
+                placeholder = { Text(stringResource(R.string.workout_title_hint)) },
+                label = { Text(stringResource(R.string.workout_title)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp)
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                OutlinedButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.weight(1f).height(52.dp),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Text(stringResource(R.string.cancel))
+                }
+                Button(
+                    onClick = { onSave(dayName) },
+                    modifier = Modifier.weight(1.4f).height(52.dp),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Text(stringResource(R.string.save), fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ResetWeekSheet(
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surface
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.errorContainer),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+                Text(
+                    text = stringResource(R.string.reset_confirmation),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Text(
+                text = stringResource(R.string.reset_confirmation_message),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                OutlinedButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.weight(1f).height(52.dp),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Text(stringResource(R.string.cancel))
+                }
+                Button(
+                    onClick = onConfirm,
+                    modifier = Modifier.weight(1f).height(52.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text(stringResource(R.string.confirm), fontWeight = FontWeight.Bold)
+                }
+            }
         }
     }
 }
