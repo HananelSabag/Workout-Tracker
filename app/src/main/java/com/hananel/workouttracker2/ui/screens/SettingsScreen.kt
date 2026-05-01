@@ -584,12 +584,15 @@ private fun InlineSegmentedSetting(
 @Composable
 private fun scheduleSubtitle(enabledDays: List<Int>): String {
     if (enabledDays.isEmpty()) return stringResource(R.string.workout_schedule_none)
-    val short = listOf(
+    // Resolve each day's short string at the @Composable layer first; joinToString runs
+    // a non-composable lambda so calling stringResource inside it would fail to compile.
+    val shortIds = listOf(
         R.string.sunday_short, R.string.monday_short, R.string.tuesday_short,
         R.string.wednesday_short, R.string.thursday_short, R.string.friday_short,
         R.string.saturday_short
     )
-    val names = enabledDays.sorted().joinToString(", ") { stringResource(short[it]) }
+    val resolved = shortIds.map { stringResource(it) }
+    val names = enabledDays.sorted().joinToString(", ") { resolved[it] }
     return stringResource(R.string.workout_schedule_summary, enabledDays.size, names)
 }
 
