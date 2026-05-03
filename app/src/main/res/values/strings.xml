@@ -165,6 +165,8 @@
     <string name="has_weight_question">תרגיל עם משקל?</string>
     <string name="has_weight_hint">הפעל אם התרגיל דורש משקל (דמבלס, ברבל וכו\')</string>
     <string name="completed_badge">הושלם</string>
+    <string name="exercise_count_one">תרגיל אחד</string>
+    <string name="exercise_count_many">%d תרגילים</string>
     
     <!-- Workout Schedule -->
     <string name="workout_schedule_title">לוח זמנים שבועי</string>

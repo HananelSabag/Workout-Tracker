@@ -165,6 +165,8 @@
     <string name="has_weight_question">Exercise with weight?</string>
     <string name="has_weight_hint">Enable if exercise requires weight (dumbbells, barbell, etc.)</string>
     <string name="completed_badge">Completed</string>
+    <string name="exercise_count_one">1 exercise</string>
+    <string name="exercise_count_many">%d exercises</string>
     
     <!-- Workout Schedule -->
     <string name="workout_schedule_title">Weekly schedule</string>
