@@ -162,7 +162,7 @@ fun WorkoutScreen(
                         Icon(
                             imageVector = Icons.Default.Refresh,
                             contentDescription = stringResource(R.string.reset_week),
-                            tint = Color(0xFF3B82F6),
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -175,7 +175,7 @@ fun WorkoutScreen(
                         Icon(
                             imageVector = Icons.Default.Notifications,
                             contentDescription = stringResource(R.string.notifications),
-                            tint = Color(0xFFEF4444),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -781,17 +781,25 @@ private fun DayHeader(
     animatedProgress: Float,
     onEditName: () -> Unit
 ) {
-    val accentColor = if (allDone) Color(0xFF10B981) else Color(0xFF3B82F6)
+    val accentColor = if (allDone)
+        MaterialTheme.colorScheme.secondary
+    else
+        MaterialTheme.colorScheme.primary
+
+    val cardColor = if (allDone)
+        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f)
+    else
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.40f)
+
     Surface(
         modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
         shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 1.dp,
-        shadowElevation = 2.dp
+        color = cardColor,
+        shadowElevation = 3.dp
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -801,7 +809,7 @@ private fun DayHeader(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = title,
-                        style = MaterialTheme.typography.titleLarge,
+                        fontSize = 22.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -815,7 +823,7 @@ private fun DayHeader(
                     onClick = onEditName,
                     modifier = Modifier.size(36.dp),
                     colors = IconButtonDefaults.filledTonalIconButtonColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+                        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
                     )
                 ) {
                     Icon(
@@ -837,12 +845,12 @@ private fun DayHeader(
                         .height(10.dp)
                         .clip(RoundedCornerShape(6.dp)),
                     color = accentColor,
-                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                    trackColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
                 )
                 Text(
                     text = "$completedCount/$totalCount",
                     style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.ExtraBold,
                     color = accentColor
                 )
             }
