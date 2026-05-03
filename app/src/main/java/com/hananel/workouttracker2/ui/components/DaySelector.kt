@@ -2,7 +2,6 @@ package com.hananel.workouttracker2.ui.components
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
@@ -13,7 +12,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -22,6 +20,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hananel.workouttracker2.R
 
+/**
+ * Slim segmented day picker. Two layouts auto-selected by density:
+ *  - ≤5 days: evenly distributed cells that always fill the row width.
+ *  - ≥6 days: tight scrollable strip with fixed-width cells.
+ *
+ * Replaces the old 56.dp pill grid that wasted a third of the screen on single-letter labels.
+ */
 @Composable
 fun DaySelector(
     selectedDayIndex: Int,
@@ -29,67 +34,95 @@ fun DaySelector(
     onDaySelected: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    LazyRow(
+    if (enabledDays.isEmpty()) return
+
+    val sorted = remember(enabledDays) { enabledDays.sorted() }
+    val compact = sorted.size <= 5
+
+    Surface(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        contentPadding = PaddingValues(horizontal = 16.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+        tonalElevation = 0.dp
     ) {
-        items(enabledDays) { dayIndex ->
-            DayPillButton(
-                dayName = getDayShortName(dayIndex),
-                isSelected = dayIndex == selectedDayIndex,
-                onClick = { onDaySelected(dayIndex) }
-            )
+        if (compact) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp)
+                    .padding(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                sorted.forEach { dayIndex ->
+                    DayCell(
+                        dayIndex = dayIndex,
+                        isSelected = dayIndex == selectedDayIndex,
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        onClick = { onDaySelected(dayIndex) }
+                    )
+                }
+            }
+        } else {
+            LazyRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp)
+                    .padding(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                items(sorted) { dayIndex ->
+                    DayCell(
+                        dayIndex = dayIndex,
+                        isSelected = dayIndex == selectedDayIndex,
+                        modifier = Modifier.width(54.dp).fillMaxHeight(),
+                        onClick = { onDaySelected(dayIndex) }
+                    )
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun DayPillButton(
-    dayName: String,
+private fun DayCell(
+    dayIndex: Int,
     isSelected: Boolean,
+    modifier: Modifier,
     onClick: () -> Unit
 ) {
-    val bgColor by animateColorAsState(
-        targetValue = if (isSelected) Color(0xFF3B82F6)
-                      else MaterialTheme.colorScheme.surfaceVariant,
-        animationSpec = tween(250),
+    val bg by animateColorAsState(
+        targetValue = if (isSelected) MaterialTheme.colorScheme.primary
+        else Color.Transparent,
+        animationSpec = tween(220),
         label = "dayBg"
     )
-    val textColor by animateColorAsState(
-        targetValue = if (isSelected) Color.White
-                      else MaterialTheme.colorScheme.onSurfaceVariant,
-        animationSpec = tween(250),
-        label = "dayText"
+    val fg by animateColorAsState(
+        targetValue = if (isSelected) MaterialTheme.colorScheme.onPrimary
+        else MaterialTheme.colorScheme.onSurfaceVariant,
+        animationSpec = tween(220),
+        label = "dayFg"
     )
-    val shadowElevation by animateDpAsState(
-        targetValue = if (isSelected) 6.dp else 0.dp,
-        animationSpec = spring(dampingRatio = 0.6f, stiffness = 300f),
+    val elev by animateDpAsState(
+        targetValue = if (isSelected) 4.dp else 0.dp,
+        animationSpec = spring(dampingRatio = 0.7f, stiffness = 380f),
         label = "dayElev"
-    )
-    val scale by animateFloatAsState(
-        targetValue = if (isSelected) 1.07f else 1f,
-        animationSpec = spring(dampingRatio = 0.55f, stiffness = 380f),
-        label = "dayScale"
     )
 
     Surface(
         onClick = onClick,
-        modifier = Modifier
-            .scale(scale)
-            .size(width = 56.dp, height = 56.dp),
-        shape = RoundedCornerShape(16.dp),
-        color = bgColor,
-        shadowElevation = shadowElevation
+        modifier = modifier,
+        shape = RoundedCornerShape(12.dp),
+        color = bg,
+        shadowElevation = elev
     ) {
-        Box(contentAlignment = Alignment.Center) {
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
             Text(
-                text = dayName,
-                fontSize = 15.sp,
-                fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium,
-                color = textColor,
+                text = getDayShortName(dayIndex),
+                fontSize = 14.sp,
+                fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
+                color = fg,
                 textAlign = TextAlign.Center
             )
         }

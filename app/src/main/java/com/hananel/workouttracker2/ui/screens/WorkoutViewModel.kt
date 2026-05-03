@@ -307,12 +307,26 @@ class WorkoutViewModel(
     }
     
     /**
-     * Called when user clicks "Finish" on the last set.
-     * The Service exclusively handles progress updates — ViewModel only stops the service.
-     * Previously had a race condition: both ViewModel and Service wrote progress simultaneously.
+     * Called when the user taps "Finish" on the last set.
+     *
+     * Bug history: the previous version delegated everything to the service via stopTimer(),
+     * but ACTION_STOP_TIMER routes straight to stopTimerAndCleanup() which only clears the
+     * timer state and notification — it never writes progress. As a result, tapping Finish
+     * on the last set's rest showed the "Exercise completed" snackbar but the card never
+     * flipped to the green completed state.
+     *
+     * Fix: explicitly mark the exercise complete here, then stop the service.
      */
     fun finishExercise(context: Context) {
         viewModelScope.launch {
+            val state = _timerState.value
+            if (state != null) {
+                repository.updateExerciseCompletedSets(
+                    state.exerciseId,
+                    state.totalSets,
+                    state.totalSets
+                )
+            }
             com.hananel.workouttracker2.service.TimerService.stopTimer(context)
         }
     }

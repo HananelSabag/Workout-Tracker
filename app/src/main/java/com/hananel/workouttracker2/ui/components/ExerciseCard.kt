@@ -1,36 +1,32 @@
 package com.hananel.workouttracker2.ui.components
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -42,18 +38,37 @@ import androidx.compose.ui.unit.sp
 import com.hananel.workouttracker2.R
 import com.hananel.workouttracker2.data.models.Exercise
 
-// ─── Colour tokens ────────────────────────────────────────────────────────────
-private val Blue500   = Color(0xFF3B82F6)
-private val Green500  = Color(0xFF10B981)
-private val Green700  = Color(0xFF059669)
-private val Amber400  = Color(0xFFFBBF24)
-private val Amber600  = Color(0xFFD97706)
-private val Amber900  = Color(0xFF92400E)
-private val Violet500 = Color(0xFF8B5CF6)
-private val Violet700 = Color(0xFF6D28D9)
-private val GreenBg   = Color(0xFFF0FDF4)
-private val AmberBg   = Color(0xFFFFFBEB)
+// ─── Color tokens (kept here so the card stays self-contained when iterating) ─
+private val AccentBlue = Color(0xFF3B82F6)
+private val AccentBlueDark = Color(0xFF1D4ED8)
+private val AccentGreen = Color(0xFF10B981)
+private val AccentGreenDark = Color(0xFF059669)
+private val AccentAmber = Color(0xFFF59E0B)
+private val AccentAmberSoft = Color(0xFFFEF3C7)
+private val AccentViolet = Color(0xFF8B5CF6)
 
+/**
+ * Modern exercise card. Replaces the previous design (left accent strip + giant primary button)
+ * with a denser layout that uses the whole card surface and softer state colors.
+ *
+ * Visual states:
+ *  - **Idle**: surface card with thin border, dim accent.
+ *  - **Active** (some sets done OR rest running for this exercise): soft tinted background.
+ *  - **Rest complete for this exercise**: green-tinted background, action button flips to
+ *    "Start Next Set".
+ *  - **Completed**: green container, big check, action area collapses.
+ *
+ * Layout (RTL-friendly because Compose mirrors Row content automatically):
+ *
+ *  ╭───────────────────────────────────────────────╮
+ *  │  Exercise name                            ⋮  │  header
+ *  │  [5 × 10-12]  [⏱ 60s]  [🏋 22.5 kg]           │  stats chips
+ *  │                                                │
+ *  │  ●●●○○                          3 / 5         │  set dots + ratio
+ *  │                                                │
+ *  │  [+ משקל]               [▶ התחל מנוחה]         │  action row
+ *  ╰───────────────────────────────────────────────╯
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExerciseCard(
@@ -70,402 +85,381 @@ fun ExerciseCard(
     isRestRunningForThis: Boolean = false,
     modifier: Modifier = Modifier
 ) {
-    var showEditDialog  by remember { mutableStateOf(false) }
-    var showMenu        by remember { mutableStateOf(false) }
-    var showWeightInput by remember { mutableStateOf(false) }
+    var showEditSheet by remember { mutableStateOf(false) }
+    var showWeightSheet by remember { mutableStateOf(false) }
+    var showMenu by remember { mutableStateOf(false) }
 
-    // ── Animated card colours ─────────────────────────────────────────────────
-    val stripColor by animateColorAsState(
-        targetValue = when {
-            isCompleted    -> Green500
-            completedSets > 0 -> Blue500
-            else           -> MaterialTheme.colorScheme.outline.copy(alpha = 0.22f)
+    val state = remember(isCompleted, isRestCompleteForThis, isRestRunningForThis, completedSets) {
+        when {
+            isCompleted -> CardTone.COMPLETED
+            isRestCompleteForThis -> CardTone.REST_DONE
+            isRestRunningForThis || completedSets > 0 -> CardTone.ACTIVE
+            else -> CardTone.IDLE
+        }
+    }
+
+    val containerColor by animateColorAsState(
+        targetValue = when (state) {
+            CardTone.COMPLETED -> MaterialTheme.colorScheme.secondaryContainer
+            CardTone.REST_DONE -> MaterialTheme.colorScheme.tertiaryContainer
+            CardTone.ACTIVE    -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
+            CardTone.IDLE      -> MaterialTheme.colorScheme.surface
         },
-        animationSpec = tween(400),
-        label = "strip"
-    )
-    val cardBg by animateColorAsState(
-        targetValue = if (isCompleted) GreenBg else MaterialTheme.colorScheme.surface,
-        animationSpec = tween(500),
+        animationSpec = tween(450),
         label = "cardBg"
     )
-    val setProgress by animateFloatAsState(
-        targetValue = if (exercise.sets > 0) completedSets.toFloat() / exercise.sets else 0f,
-        animationSpec = tween(600),
-        label = "setProgress"
+    val borderColor by animateColorAsState(
+        targetValue = when (state) {
+            CardTone.COMPLETED -> AccentGreen.copy(alpha = 0.55f)
+            CardTone.REST_DONE -> AccentGreen.copy(alpha = 0.55f)
+            CardTone.ACTIVE    -> AccentBlue.copy(alpha = 0.45f)
+            CardTone.IDLE      -> MaterialTheme.colorScheme.outline.copy(alpha = 0.18f)
+        },
+        animationSpec = tween(450),
+        label = "cardBorder"
     )
 
-    Card(
+    Surface(
         modifier = modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = if (isCompleted) 0.dp else 4.dp
-        ),
-        colors = CardDefaults.cardColors(containerColor = cardBg),
-        shape = RoundedCornerShape(20.dp)
+        shape = RoundedCornerShape(24.dp),
+        color = containerColor,
+        tonalElevation = if (state == CardTone.IDLE) 0.dp else 1.dp,
+        shadowElevation = if (state == CardTone.COMPLETED) 1.dp else 4.dp,
+        border = androidx.compose.foundation.BorderStroke(1.dp, borderColor)
     ) {
-        Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .animateContentSize()
+                .padding(horizontal = 18.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
 
-            // ── Left accent strip ─────────────────────────────────────────────
-            Box(
-                modifier = Modifier
-                    .width(6.dp)
-                    .fillMaxHeight()
-                    .background(
-                        color = stripColor,
-                        shape = RoundedCornerShape(topStart = 20.dp, bottomStart = 20.dp)
-                    )
-            )
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .animateContentSize()
-                    .padding(horizontal = 16.dp, vertical = 16.dp)
+            // ── Header: name + menu / completion check ──────────────────────
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(id = exercise.nameResId),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 19.sp,
+                        color = if (isCompleted) AccentGreenDark
+                        else MaterialTheme.colorScheme.onSurface,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (exercise.equipment.isNotBlank()) {
+                        Text(
+                            text = exercise.equipment,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 2.dp)
+                        )
+                    }
+                }
 
-                // ── Header row: name + chips / menu + circle ──────────────────
+                Box {
+                    if (isCompleted) {
+                        // Stand-in for both "menu trigger" and "completion indicator" — tapping
+                        // the badge opens the menu (so users can still uncomplete/edit). This
+                        // removes the previous separate empty-circle widget that mostly sat
+                        // unused on the left side of every card.
+                        CompletionBadge(
+                            onClick = { showMenu = true }
+                        )
+                    } else {
+                        IconButton(
+                            onClick = { showMenu = true },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false }
+                    ) {
+                        if (isCompleted) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.mark_complete) + " ↺") },
+                                onClick = { showMenu = false; onToggleComplete() },
+                                leadingIcon = { Icon(Icons.Default.Check, null) }
+                            )
+                        } else {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.mark_complete)) },
+                                onClick = { showMenu = false; onToggleComplete() },
+                                leadingIcon = { Icon(Icons.Default.Check, null) }
+                            )
+                        }
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.edit)) },
+                            onClick = { showMenu = false; showEditSheet = true },
+                            leadingIcon = { Icon(Icons.Default.Edit, null) }
+                        )
+                        if (onDeleteExercise != null) {
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        stringResource(R.string.delete),
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                },
+                                onClick = { showMenu = false; onDeleteExercise() },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        null,
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
+            // ── Stats chips: sets×reps · rest · weight (if set) ─────────────
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                StatChip(
+                    icon = Icons.Default.Repeat,
+                    label = "${exercise.sets} × ${exercise.reps}",
+                    tint = AccentBlue
+                )
+                if (exercise.restTime > 0) {
+                    StatChip(
+                        icon = Icons.Default.Timer,
+                        label = "${exercise.restTime}s",
+                        tint = AccentAmber
+                    )
+                }
+                if (exercise.hasWeight && weight > 0f) {
+                    StatChip(
+                        icon = Icons.Default.FitnessCenter,
+                        label = "${formatWeight(weight)} ${stringResource(R.string.kg)}",
+                        tint = AccentViolet,
+                        onClick = { showWeightSheet = true }
+                    )
+                }
+            }
+
+            // ── Set dots + numeric counter ──────────────────────────────────
+            if (!isCompleted) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Top
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Left: name + stat chips
-                    Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
-                        Text(
-                            text = stringResource(id = exercise.nameResId),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = if (isCompleted) Green700
-                                    else MaterialTheme.colorScheme.onSurface,
-                            fontSize = 16.sp,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Spacer(modifier = Modifier.height(7.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            ExerciseStatChip(
-                                icon  = Icons.Default.FitnessCenter,
-                                text  = "${exercise.sets} × ${exercise.reps}",
-                                color = Blue500
-                            )
-                            if (exercise.restTime > 0) {
-                                ExerciseStatChip(
-                                    icon  = Icons.Default.Timer,
-                                    text  = "${exercise.restTime}s",
-                                    color = Amber600
-                                )
-                            }
-                        }
-                    }
-
-                    // Right: three-dot menu + completion circle
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box {
-                            IconButton(
-                                onClick = { showMenu = true },
-                                modifier = Modifier.size(32.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.MoreVert,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                            DropdownMenu(
-                                expanded = showMenu,
-                                onDismissRequest = { showMenu = false }
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.edit)) },
-                                    onClick = { showMenu = false; showEditDialog = true },
-                                    leadingIcon = { Icon(Icons.Default.Edit, null) }
-                                )
-                                if (onDeleteExercise != null) {
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(
-                                                stringResource(R.string.delete),
-                                                color = MaterialTheme.colorScheme.error
-                                            )
-                                        },
-                                        onClick = { showMenu = false; onDeleteExercise() },
-                                        leadingIcon = {
-                                            Icon(
-                                                Icons.Default.Delete,
-                                                null,
-                                                tint = MaterialTheme.colorScheme.error
-                                            )
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                        CompleteCircleButton(isCompleted = isCompleted, onClick = onToggleComplete)
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                // ── Progress bar + fraction ───────────────────────────────────
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    LinearProgressIndicator(
-                        progress = { setProgress },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(7.dp)
-                            .clip(RoundedCornerShape(4.dp)),
-                        color = if (isCompleted) Green500 else Blue500,
-                        trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)
+                    SetDots(
+                        completedSets = completedSets,
+                        currentSet = completedSets + 1,
+                        totalSets = exercise.sets,
+                        isRestRunning = isRestRunningForThis
                     )
                     Text(
-                        text = "$completedSets/${exercise.sets}",
-                        style = MaterialTheme.typography.labelMedium,
+                        text = "$completedSets / ${exercise.sets}",
+                        style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
-                        color = if (isCompleted) Green500
-                                else MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+            }
 
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // ── Numbered set progress dots ────────────────────────────────
-                SetProgressIndicator(
-                    completedSets = completedSets,
-                    currentSet    = completedSets + 1,
-                    totalSets     = exercise.sets
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // ── Weight section + action button ────────────────────────────
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    if (exercise.hasWeight) {
-                        WeightRow(
-                            weight      = weight,
-                            showInput   = showWeightInput,
-                            onToggle    = { showWeightInput = it },
-                            onWeightChange = onWeightChange
-                        )
-                        Spacer(modifier = Modifier.height(10.dp))
+            // ── Action row: weight CTA + primary action ─────────────────────
+            if (!isCompleted) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (exercise.hasWeight && weight <= 0f) {
+                        FilledTonalButton(
+                            onClick = { showWeightSheet = true },
+                            modifier = Modifier.height(48.dp),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.filledTonalButtonColors(
+                                containerColor = AccentAmberSoft,
+                                contentColor = Color(0xFF92400E)
+                            ),
+                            contentPadding = PaddingValues(horizontal = 14.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.FitnessCenter,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                stringResource(R.string.set_weight),
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 13.sp
+                            )
+                        }
                     }
-
-                    ExerciseActionButton(
-                        isCompleted   = isCompleted,
+                    PrimaryActionButton(
                         completedSets = completedSets,
-                        totalSets     = exercise.sets,
+                        totalSets = exercise.sets,
                         isRestCompleteForThis = isRestCompleteForThis,
-                        isRestRunningForThis  = isRestRunningForThis,
-                        onClick       = onStartRest,
-                        modifier      = Modifier.fillMaxWidth()
+                        isRestRunningForThis = isRestRunningForThis,
+                        onClick = onStartRest,
+                        modifier = Modifier.weight(1f)
                     )
                 }
             }
         }
     }
 
-    if (showEditDialog) {
+    if (showEditSheet) {
         ExerciseEditDialog(
-            exercise      = exercise,
+            exercise = exercise,
             currentWeight = weight,
-            onDismiss     = { showEditDialog = false },
-            onSave        = { sets, reps, restTime, newWeight ->
+            onDismiss = { showEditSheet = false },
+            onSave = { sets, reps, restTime, newWeight ->
                 onEditExercise?.invoke(sets, reps, restTime, newWeight) ?: onWeightChange(newWeight)
+            }
+        )
+    }
+    if (showWeightSheet) {
+        WeightInputSheet(
+            initialWeight = weight,
+            onDismiss = { showWeightSheet = false },
+            onSave = {
+                onWeightChange(it)
+                showWeightSheet = false
             }
         )
     }
 }
 
-// ── Weight row (compact prompt / chip / inline input) ────────────────────────
+private enum class CardTone { IDLE, ACTIVE, REST_DONE, COMPLETED }
+
+// ─── Header completion badge ─────────────────────────────────────────────────
 
 @Composable
-private fun WeightRow(
-    weight: Float,
-    showInput: Boolean,
-    onToggle: (Boolean) -> Unit,
-    onWeightChange: (Float) -> Unit
-) {
-    AnimatedContent(
-        targetState = when {
-            showInput   -> WeightUiState.INPUT
-            weight > 0f -> WeightUiState.CHIP
-            else        -> WeightUiState.PROMPT
-        },
-        transitionSpec = {
-            (fadeIn(tween(200)) + slideInVertically { -it / 4 })
-                .togetherWith(fadeOut(tween(150)) + slideOutVertically { it / 4 })
-        },
-        label = "weightState"
-    ) { state ->
-        when (state) {
-            WeightUiState.INPUT -> {
-                InlineWeightInput(
-                    initialWeight = if (weight > 0f) weight.toString() else "",
-                    onSave = { newWeight ->
-                        if (newWeight > 0) {
-                            onWeightChange(newWeight)
-                            onToggle(false)
-                        }
-                    },
-                    onCancel = if (weight > 0f) ({ onToggle(false) }) else null
-                )
-            }
-            WeightUiState.CHIP -> {
-                // Tappable weight chip (purple)
-                Surface(
-                    onClick = { onToggle(true) },
-                    shape = RoundedCornerShape(12.dp),
-                    color = Violet500.copy(alpha = 0.10f)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.FitnessCenter,
-                            contentDescription = null,
-                            tint = Violet500,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Text(
-                            text = "$weight ${stringResource(R.string.kg)}",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = Violet700,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = null,
-                            tint = Violet500.copy(alpha = 0.6f),
-                            modifier = Modifier.size(12.dp)
-                        )
-                    }
-                }
-            }
-            WeightUiState.PROMPT -> {
-                // "Add weight" prompt chip (amber, soft)
-                Surface(
-                    onClick = { onToggle(true) },
-                    shape = RoundedCornerShape(12.dp),
-                    color = AmberBg,
-                    border = BorderStroke(1.dp, Amber400.copy(alpha = 0.55f))
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = null,
-                            tint = Amber600,
-                            modifier = Modifier.size(15.dp)
-                        )
-                        Text(
-                            text = stringResource(R.string.set_weight),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = Amber900,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-private enum class WeightUiState { PROMPT, CHIP, INPUT }
-
-// ── Helper composables ────────────────────────────────────────────────────────
-
-@Composable
-private fun ExerciseStatChip(icon: ImageVector, text: String, color: Color) {
+private fun CompletionBadge(onClick: () -> Unit) {
+    val scale by animateFloatAsState(
+        targetValue = 1f,
+        animationSpec = spring(dampingRatio = 0.6f, stiffness = 380f),
+        label = "doneScale"
+    )
     Surface(
-        shape = RoundedCornerShape(8.dp),
-        color = color.copy(alpha = 0.12f)
+        onClick = onClick,
+        modifier = Modifier.size(40.dp),
+        shape = CircleShape,
+        color = AccentGreen,
+        shadowElevation = 4.dp
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = color,
-                modifier = Modifier.size(13.dp)
-            )
-            Text(
-                text = text,
-                style = MaterialTheme.typography.labelSmall,
-                color = color,
-                fontWeight = FontWeight.Bold,
-                fontSize = 12.sp
-            )
-        }
-    }
-}
-
-@Composable
-private fun CompleteCircleButton(isCompleted: Boolean, onClick: () -> Unit) {
-    val circleScale by animateFloatAsState(
-        targetValue = if (isCompleted) 1.12f else 1f,
-        animationSpec = spring(dampingRatio = 0.55f, stiffness = 380f),
-        label = "circleScale"
-    )
-    val circleBg by animateColorAsState(
-        targetValue = if (isCompleted) Green500
-                      else MaterialTheme.colorScheme.surfaceVariant,
-        animationSpec = tween(300),
-        label = "circleBg"
-    )
-    val circleBorder by animateColorAsState(
-        targetValue = if (isCompleted) Green500
-                      else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
-        animationSpec = tween(300),
-        label = "circleBorder"
-    )
-
-    Box(
-        modifier = Modifier
-            .size(44.dp)
-            .scale(circleScale)
-            .clip(CircleShape)
-            .background(circleBg)
-            .border(2.dp, circleBorder, CircleShape)
-            .clickable(
-                onClick = onClick,
-                indication = null,
-                interactionSource = remember { MutableInteractionSource() }
-            ),
-        contentAlignment = Alignment.Center
-    ) {
-        AnimatedVisibility(
-            visible = isCompleted,
-            enter = scaleIn() + fadeIn(),
-            exit  = scaleOut() + fadeOut()
-        ) {
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
             Icon(
                 imageVector = Icons.Default.Check,
                 contentDescription = null,
                 tint = Color.White,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(22.dp)
             )
         }
     }
 }
 
+// ─── Stat chip ───────────────────────────────────────────────────────────────
+
 @Composable
-private fun ExerciseActionButton(
-    isCompleted: Boolean,
+private fun StatChip(
+    icon: ImageVector,
+    label: String,
+    tint: Color,
+    onClick: (() -> Unit)? = null
+) {
+    val shape = RoundedCornerShape(10.dp)
+    val container = tint.copy(alpha = 0.14f)
+    val baseModifier = Modifier
+        .clip(shape)
+        .background(container)
+        .padding(horizontal = 10.dp, vertical = 6.dp)
+    val content: @Composable () -> Unit = {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(5.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier.size(14.dp)
+            )
+            Text(
+                text = label,
+                color = tint,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+    if (onClick != null) {
+        Surface(onClick = onClick, color = Color.Transparent) {
+            Box(modifier = baseModifier) { content() }
+        }
+    } else {
+        Box(modifier = baseModifier) { content() }
+    }
+}
+
+// ─── Set dots — small round indicators with active-set animation ─────────────
+
+@Composable
+private fun SetDots(
+    completedSets: Int,
+    currentSet: Int,
+    totalSets: Int,
+    isRestRunning: Boolean
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        repeat(totalSets) { index ->
+            val setNumber = index + 1
+            val isDone = setNumber <= completedSets
+            val isActive = setNumber == currentSet && !isDone
+            val color by animateColorAsState(
+                targetValue = when {
+                    isDone -> AccentGreen
+                    isActive -> if (isRestRunning) AccentAmber else AccentBlue
+                    else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
+                },
+                animationSpec = tween(350),
+                label = "dotColor_$index"
+            )
+            val size by animateFloatAsState(
+                targetValue = if (isActive) 1.25f else 1f,
+                animationSpec = spring(dampingRatio = 0.55f, stiffness = 380f),
+                label = "dotScale_$index"
+            )
+            Box(
+                modifier = Modifier
+                    .size((10 * size).dp)
+                    .clip(CircleShape)
+                    .background(color)
+            )
+        }
+    }
+}
+
+// ─── Primary action button: Start Rest / Resume Rest / Start Next Set ────────
+
+@Composable
+private fun PrimaryActionButton(
     completedSets: Int,
     totalSets: Int,
     isRestCompleteForThis: Boolean,
@@ -473,106 +467,172 @@ private fun ExerciseActionButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val bgColor by animateColorAsState(
-        targetValue = when {
-            isCompleted            -> Green500
-            isRestCompleteForThis  -> Green500
-            else                   -> Blue500
-        },
-        animationSpec = tween(300),
-        label = "btnBg"
-    )
-
-    Button(
-        onClick = onClick,
-        // Disable while a rest countdown is actively running for THIS exercise so the user can't
-        // double-tap; but keep enabled when isRestComplete so they can advance the timer right
-        // from the card without opening the sheet.
-        enabled = !isCompleted && completedSets < totalSets && !isRestRunningForThis,
-        modifier = modifier.height(50.dp),
-        shape = RoundedCornerShape(14.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = bgColor,
-            disabledContainerColor = Green500.copy(alpha = 0.55f)
-        ),
-        elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
-    ) {
-        Icon(
-            imageVector = when {
-                isCompleted           -> Icons.Default.Check
-                isRestCompleteForThis -> Icons.Default.SkipNext
-                else                  -> Icons.Default.PlayArrow
-            },
-            contentDescription = null,
-            modifier = Modifier.size(20.dp)
+    val (label, icon, gradientStart, gradientEnd) = when {
+        isRestCompleteForThis -> Quad(
+            stringResource(R.string.start_next_set),
+            Icons.Default.SkipNext,
+            AccentGreen,
+            AccentGreenDark
         )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = when {
-                isCompleted           -> stringResource(R.string.finished)
-                isRestCompleteForThis -> stringResource(R.string.start_next_set)
-                isRestRunningForThis  -> stringResource(R.string.resume_rest)
-                completedSets > 0     -> stringResource(R.string.resume_rest)
-                else                  -> stringResource(R.string.start_rest)
-            },
-            fontWeight = FontWeight.Bold,
-            fontSize = 15.sp
+        isRestRunningForThis || completedSets > 0 -> Quad(
+            stringResource(R.string.resume_rest),
+            Icons.Default.PlayArrow,
+            AccentBlue,
+            AccentBlueDark
+        )
+        else -> Quad(
+            stringResource(R.string.start_rest),
+            Icons.Default.PlayArrow,
+            AccentBlue,
+            AccentBlueDark
         )
     }
-}
 
-@Composable
-private fun InlineWeightInput(
-    initialWeight: String,
-    onSave: (Float) -> Unit,
-    onCancel: (() -> Unit)?
-) {
-    var value by remember { mutableStateOf(initialWeight) }
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    val shape = RoundedCornerShape(14.dp)
+    Surface(
+        onClick = onClick,
+        modifier = modifier.height(48.dp),
+        shape = shape,
+        color = Color.Transparent,
+        shadowElevation = 3.dp,
+        enabled = !isRestRunningForThis && completedSets < totalSets
     ) {
-        OutlinedTextField(
-            value = value,
-            onValueChange = { value = it },
-            placeholder = { Text("0.0", fontSize = 14.sp) },
-            suffix = { Text(stringResource(R.string.kg), fontSize = 14.sp) },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-            singleLine = true,
-            modifier = Modifier.weight(1f).height(52.dp),
-            shape = RoundedCornerShape(12.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Violet500,
-                unfocusedBorderColor = Violet500.copy(alpha = 0.4f)
-            )
-        )
-        Button(
-            onClick = { onSave(value.toFloatOrNull() ?: 0f) },
-            enabled = value.toFloatOrNull()?.let { it > 0 } == true,
-            modifier = Modifier.height(52.dp),
-            shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Violet500)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(shape)
+                .background(Brush.horizontalGradient(listOf(gradientStart, gradientEnd))),
+            contentAlignment = Alignment.Center
         ) {
-            Text(stringResource(R.string.save), fontWeight = FontWeight.Bold)
-        }
-        if (onCancel != null) {
-            IconButton(
-                onClick = onCancel,
-                modifier = Modifier.size(40.dp)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Default.Close,
+                    imageVector = icon,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = Color.White,
+                    modifier = Modifier.size(18.dp)
+                )
+                Text(
+                    text = label,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp
                 )
             }
         }
     }
 }
 
-// ── Edit Sheet (formerly AlertDialog) ─────────────────────────────────────────
+private data class Quad(
+    val label: String,
+    val icon: ImageVector,
+    val gradientStart: Color,
+    val gradientEnd: Color
+)
+
+// ─── Weight input bottom sheet ───────────────────────────────────────────────
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun WeightInputSheet(
+    initialWeight: Float,
+    onDismiss: () -> Unit,
+    onSave: (Float) -> Unit
+) {
+    var value by remember {
+        mutableStateOf(if (initialWeight > 0f) formatWeight(initialWeight) else "")
+    }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surface
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(AccentViolet.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.FitnessCenter,
+                        contentDescription = null,
+                        tint = AccentViolet,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Text(
+                    text = stringResource(R.string.weight),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            OutlinedTextField(
+                value = value,
+                onValueChange = { value = it },
+                placeholder = { Text("0.0") },
+                suffix = { Text(stringResource(R.string.kg)) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                singleLine = true,
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            // Quick weight chips so the user doesn't always have to type.
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("10", "20", "40", "60", "80").forEach { preset ->
+                    AssistChip(
+                        onClick = { value = preset },
+                        label = { Text(preset) }
+                    )
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                OutlinedButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.weight(1f).height(52.dp),
+                    shape = RoundedCornerShape(14.dp)
+                ) { Text(stringResource(R.string.cancel)) }
+                Button(
+                    onClick = { onSave(value.toFloatOrNull() ?: 0f) },
+                    enabled = value.toFloatOrNull()?.let { it > 0f } == true,
+                    modifier = Modifier.weight(1.4f).height(52.dp),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Text(stringResource(R.string.save), fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
+}
+
+private fun formatWeight(weight: Float): String {
+    // Show as integer when there's no fractional part, otherwise with one decimal.
+    return if (weight % 1f == 0f) weight.toInt().toString()
+    else "%.1f".format(weight)
+}
+
+// ─── Edit sheet (unchanged signature, kept as a bottom sheet) ────────────────
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -585,11 +645,13 @@ fun ExerciseEditDialog(
     var sets     by remember { mutableStateOf(exercise.sets.toString()) }
     var reps     by remember { mutableStateOf(exercise.reps) }
     var restTime by remember { mutableStateOf(exercise.restTime.toString()) }
-    var weight   by remember { mutableStateOf(if (currentWeight > 0) currentWeight.toString() else "") }
+    var weight   by remember {
+        mutableStateOf(if (currentWeight > 0) formatWeight(currentWeight) else "")
+    }
 
-    val isValid = sets.toIntOrNull() != null && sets.toIntOrNull()!! > 0 &&
+    val isValid = sets.toIntOrNull()?.let { it > 0 } == true &&
             reps.isNotBlank() &&
-            restTime.toIntOrNull() != null && restTime.toIntOrNull()!! >= 0 &&
+            restTime.toIntOrNull()?.let { it >= 0 } == true &&
             (!exercise.hasWeight || weight.isEmpty() || weight.toFloatOrNull() != null)
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -666,9 +728,7 @@ fun ExerciseEditDialog(
                     onClick = onDismiss,
                     modifier = Modifier.weight(1f).height(52.dp),
                     shape = RoundedCornerShape(14.dp)
-                ) {
-                    Text(stringResource(R.string.cancel))
-                }
+                ) { Text(stringResource(R.string.cancel)) }
                 Button(
                     onClick = {
                         if (isValid) {

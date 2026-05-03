@@ -401,59 +401,17 @@ fun WorkoutScreen(
                             animationSpec = tween(600),
                             label = "dayProgress"
                         )
-                        val progressColor = if (isAllDone) Color(0xFF10B981) else Color(0xFF3B82F6)
 
                         var showEditDialog by remember { mutableStateOf(false) }
 
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 4.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.Top
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = currentWorkout.getDisplayName(context),
-                                    style = MaterialTheme.typography.headlineSmall,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                ) {
-                                    LinearProgressIndicator(
-                                        progress = { animatedProgress },
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .height(7.dp)
-                                            .clip(RoundedCornerShape(4.dp)),
-                                        color = progressColor,
-                                        trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)
-                                    )
-                                    Text(
-                                        text = "$completedCount/$totalExercises",
-                                        style = MaterialTheme.typography.labelLarge,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (isAllDone) Color(0xFF10B981)
-                                                else MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-
-                            IconButton(
-                                onClick = { showEditDialog = true },
-                                modifier = Modifier.size(40.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Edit,
-                                    contentDescription = stringResource(R.string.edit),
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        }
+                        DayHeader(
+                            title = currentWorkout.getDisplayName(context),
+                            completedCount = completedCount,
+                            totalCount = totalExercises,
+                            allDone = isAllDone,
+                            animatedProgress = animatedProgress,
+                            onEditName = { showEditDialog = true }
+                        )
 
                         if (showEditDialog) {
                             RenameDaySheet(
@@ -807,6 +765,97 @@ private fun ResetWeekSheet(
             }
         }
     }
+}
+
+/**
+ * Header that sits above the exercise list. Replaces the old design where the day name had a
+ * giant blue floating pencil icon next to it. The new layout is a single rounded card with the
+ * name, an "X exercises" sub-line, a thicker progress bar, and a small inline edit pill.
+ */
+@Composable
+private fun DayHeader(
+    title: String,
+    completedCount: Int,
+    totalCount: Int,
+    allDone: Boolean,
+    animatedProgress: Float,
+    onEditName: () -> Unit
+) {
+    val accentColor = if (allDone) Color(0xFF10B981) else Color(0xFF3B82F6)
+    Surface(
+        modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 1.dp,
+        shadowElevation = 2.dp
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = pluralizeExercises(totalCount),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                FilledTonalIconButton(
+                    onClick = onEditName,
+                    modifier = Modifier.size(36.dp),
+                    colors = IconButtonDefaults.filledTonalIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = stringResource(R.string.edit),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                LinearProgressIndicator(
+                    progress = { animatedProgress },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(10.dp)
+                        .clip(RoundedCornerShape(6.dp)),
+                    color = accentColor,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+                Text(
+                    text = "$completedCount/$totalCount",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = accentColor
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun pluralizeExercises(count: Int): String {
+    // Don't try to pluralize Hebrew at the string-resource layer (would need plurals.xml). Inline
+    // a simple "N exercises" / "1 exercise" choice that reads naturally in both langs.
+    return if (count == 1) stringResource(R.string.exercise_count_one)
+    else stringResource(R.string.exercise_count_many, count)
 }
 
 private fun formatTime(seconds: Int): String {
