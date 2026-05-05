@@ -1,8 +1,6 @@
 package com.hananel.workouttracker2.ui.components
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -21,11 +19,9 @@ import androidx.compose.ui.unit.sp
 import com.hananel.workouttracker2.R
 
 /**
- * Slim segmented day picker. Two layouts auto-selected by density:
- *  - ≤5 days: evenly distributed cells that always fill the row width.
- *  - ≥6 days: tight scrollable strip with fixed-width cells.
- *
- * Replaces the old 56.dp pill grid that wasted a third of the screen on single-letter labels.
+ * Slim pill-tab day strip. No outer container surface — just a row of capsule chips.
+ * Selected day = filled primary capsule. Unselected = transparent text.
+ * Total height ~46 dp (vs the old ~68 dp box).
  */
 @Composable
 fun DaySelector(
@@ -37,91 +33,76 @@ fun DaySelector(
     if (enabledDays.isEmpty()) return
 
     val sorted = remember(enabledDays) { enabledDays.sorted() }
-    val compact = sorted.size <= 5
 
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-        tonalElevation = 0.dp
-    ) {
-        if (compact) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp)
-                    .padding(4.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                sorted.forEach { dayIndex ->
-                    DayCell(
-                        dayIndex = dayIndex,
-                        isSelected = dayIndex == selectedDayIndex,
-                        modifier = Modifier.weight(1f).fillMaxHeight(),
-                        onClick = { onDaySelected(dayIndex) }
-                    )
-                }
+    if (sorted.size <= 5) {
+        Row(
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            sorted.forEach { dayIndex ->
+                DayTab(
+                    dayIndex = dayIndex,
+                    isSelected = dayIndex == selectedDayIndex,
+                    onClick = { onDaySelected(dayIndex) }
+                )
             }
-        } else {
-            LazyRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp)
-                    .padding(4.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                items(sorted) { dayIndex ->
-                    DayCell(
-                        dayIndex = dayIndex,
-                        isSelected = dayIndex == selectedDayIndex,
-                        modifier = Modifier.width(54.dp).fillMaxHeight(),
-                        onClick = { onDaySelected(dayIndex) }
-                    )
-                }
+        }
+    } else {
+        LazyRow(
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            contentPadding = PaddingValues(horizontal = 4.dp)
+        ) {
+            items(sorted) { dayIndex ->
+                DayTab(
+                    dayIndex = dayIndex,
+                    isSelected = dayIndex == selectedDayIndex,
+                    onClick = { onDaySelected(dayIndex) }
+                )
             }
         }
     }
 }
 
 @Composable
-private fun DayCell(
+private fun DayTab(
     dayIndex: Int,
     isSelected: Boolean,
-    modifier: Modifier,
     onClick: () -> Unit
 ) {
     val bg by animateColorAsState(
-        targetValue = if (isSelected) MaterialTheme.colorScheme.primary
-        else Color.Transparent,
-        animationSpec = tween(220),
-        label = "dayBg"
+        targetValue = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+        animationSpec = tween(200),
+        label = "tabBg"
     )
     val fg by animateColorAsState(
         targetValue = if (isSelected) MaterialTheme.colorScheme.onPrimary
-        else MaterialTheme.colorScheme.onSurfaceVariant,
-        animationSpec = tween(220),
-        label = "dayFg"
-    )
-    val elev by animateDpAsState(
-        targetValue = if (isSelected) 4.dp else 0.dp,
-        animationSpec = spring(dampingRatio = 0.7f, stiffness = 380f),
-        label = "dayElev"
+        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.60f),
+        animationSpec = tween(200),
+        label = "tabFg"
     )
 
     Surface(
         onClick = onClick,
-        modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(50.dp),
         color = bg,
-        shadowElevation = elev
+        modifier = Modifier
+            .height(34.dp)
+            .widthIn(min = 34.dp)
     ) {
-        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.padding(horizontal = 14.dp)
+        ) {
             Text(
                 text = getDayShortName(dayIndex),
-                fontSize = 14.sp,
-                fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
+                fontSize = 13.sp,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                 color = fg,
                 textAlign = TextAlign.Center
             )
