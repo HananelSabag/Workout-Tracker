@@ -31,6 +31,13 @@ import androidx.compose.ui.unit.dp
 import com.hananel.workouttracker2.R
 import com.hananel.workouttracker2.data.models.UserPreferences
 import com.hananel.workouttracker2.data.repository.WorkoutRepository
+import com.hananel.workouttracker2.ui.components.GhostButton
+import com.hananel.workouttracker2.ui.components.GlassSheet
+import com.hananel.workouttracker2.ui.components.GradientButton
+import com.hananel.workouttracker2.ui.theme.AccentGradient
+import com.hananel.workouttracker2.ui.theme.AppBackground
+import com.hananel.workouttracker2.ui.theme.GlassCard
+import com.hananel.workouttracker2.ui.theme.rememberGlassColors
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -72,23 +79,30 @@ fun SettingsScreen(
         return
     }
     
+    val glass = rememberGlassColors()
+
+    AppBackground {
     Scaffold(
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
-                title = { 
+                title = {
                     Text(
                         stringResource(R.string.settings),
-                        fontWeight = FontWeight.Bold
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = glass.onGlass
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.back)
+                            contentDescription = stringResource(R.string.back),
+                            tint = glass.onGlass
                         )
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
         },
         modifier = modifier
@@ -324,7 +338,9 @@ fun SettingsScreen(
             }
         }
     }
-    
+    }
+
+
     // Workout Schedule bottom sheet — pick which weekdays you train. Doesn't change the workout
     // structure itself (that's the workout builder); only the visible days in the day selector.
     if (showScheduleSheet) {
@@ -342,43 +358,41 @@ fun SettingsScreen(
         )
     }
 
-    // Reset Confirmation Dialog
     if (showResetDialog) {
-        AlertDialog(
-            onDismissRequest = { showResetDialog = false },
-            icon = {
-                Icon(
-                    Icons.Outlined.Warning,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.error
+        GlassSheet(
+            title = stringResource(R.string.reset_confirmation),
+            icon = Icons.Outlined.RestartAlt,
+            accent = MaterialTheme.colorScheme.error,
+            onDismiss = { showResetDialog = false }
+        ) {
+            Text(
+                text = stringResource(R.string.reset_confirmation_message),
+                style = MaterialTheme.typography.bodyMedium,
+                color = glass.onGlassMuted
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                GhostButton(
+                    text = stringResource(R.string.cancel),
+                    onClick = { showResetDialog = false },
+                    modifier = Modifier.weight(1f)
                 )
-            },
-            title = { 
-                Text(
-                    stringResource(R.string.reset_confirmation),
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            text = { Text(stringResource(R.string.reset_confirmation_message)) },
-            confirmButton = {
-                Button(
+                GradientButton(
+                    text = stringResource(R.string.confirm),
+                    gradient = listOf(
+                        MaterialTheme.colorScheme.error,
+                        MaterialTheme.colorScheme.error.copy(alpha = 0.75f)
+                    ),
                     onClick = {
                         onResetWeekly()
                         showResetDialog = false
                     },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error
-                    )
-                ) {
-                    Text(stringResource(R.string.confirm))
-                }
-            },
-            dismissButton = {
-                OutlinedButton(onClick = { showResetDialog = false }) {
-                    Text(stringResource(R.string.cancel))
-                }
+                    modifier = Modifier.weight(1f)
+                )
             }
-        )
+        }
     }
 }
 
@@ -390,16 +404,11 @@ private fun SettingsSection(
     Column {
         Text(
             text = title,
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
         )
-        Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerLow,
-            tonalElevation = 1.dp
-        ) {
+        GlassCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(22.dp)) {
             Column(modifier = Modifier.fillMaxWidth()) {
                 content()
             }
@@ -609,7 +618,7 @@ private fun WorkoutScheduleSheet(
     onSave: (Set<Int>) -> Unit
 ) {
     var selected by remember { mutableStateOf(currentDays) }
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val glass = rememberGlassColors()
 
     val dayLabels = listOf(
         stringResource(R.string.day_sunday),
@@ -621,49 +630,13 @@ private fun WorkoutScheduleSheet(
         stringResource(R.string.day_saturday)
     )
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surface
+    GlassSheet(
+        title = stringResource(R.string.workout_schedule_title),
+        subtitle = stringResource(R.string.workout_schedule_hint),
+        icon = Icons.Outlined.CalendarMonth,
+        accent = Color(0xFF22C55E),
+        onDismiss = onDismiss
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .background(Color(0xFF22C55E).copy(alpha = 0.15f), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Outlined.CalendarMonth,
-                        contentDescription = null,
-                        tint = Color(0xFF16A34A),
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-                Column {
-                    Text(
-                        text = stringResource(R.string.workout_schedule_title),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = stringResource(R.string.workout_schedule_hint),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
             // Quick presets so users don't have to tap 4 times for the common cases.
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -693,8 +666,8 @@ private fun WorkoutScheduleSheet(
                             selected = if (checked) selected - index else selected + index
                         },
                         shape = RoundedCornerShape(14.dp),
-                        color = if (checked) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                        color = if (checked) MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
+                        else glass.onGlass.copy(alpha = 0.05f),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(
@@ -726,22 +699,18 @@ private fun WorkoutScheduleSheet(
                 modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                OutlinedButton(
+                GhostButton(
+                    text = stringResource(R.string.cancel),
                     onClick = onDismiss,
-                    modifier = Modifier.weight(1f).height(52.dp),
-                    shape = RoundedCornerShape(14.dp)
-                ) {
-                    Text(stringResource(R.string.cancel))
-                }
-                Button(
+                    modifier = Modifier.weight(1f)
+                )
+                GradientButton(
+                    text = stringResource(R.string.save),
                     onClick = { onSave(selected) },
                     enabled = selected.isNotEmpty(),
-                    modifier = Modifier.weight(1.4f).height(52.dp),
-                    shape = RoundedCornerShape(14.dp)
-                ) {
-                    Text(stringResource(R.string.save), fontWeight = FontWeight.Bold)
-                }
+                    gradient = AccentGradient,
+                    modifier = Modifier.weight(1.4f)
+                )
             }
-        }
     }
 }

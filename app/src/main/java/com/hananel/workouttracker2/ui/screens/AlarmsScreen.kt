@@ -59,23 +59,30 @@ fun AlarmsScreen(
         }
     }
     
+    val glass = com.hananel.workouttracker2.ui.theme.rememberGlassColors()
+
+    com.hananel.workouttracker2.ui.theme.AppBackground {
     Scaffold(
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
-                title = { 
+                title = {
                     Text(
                         stringResource(R.string.workout_alarms),
-                        fontWeight = FontWeight.Bold
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = glass.onGlass
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.back)
+                            contentDescription = stringResource(R.string.back),
+                            tint = glass.onGlass
                         )
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
         },
         floatingActionButton = {
@@ -244,6 +251,7 @@ fun AlarmsScreen(
                 }
             )
         }
+    }
     }
 }
 

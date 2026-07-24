@@ -335,4 +335,46 @@
     <string name="no_workout_structure">אין תוכנית אימונים</string>
     <string name="no_workout_structure_message">התחל על ידי הגדרת ימי האימון והתרגילים שלך</string>
     <string name="setup_workout_plan">הגדר תוכנית אימונים</string>
+
+    <!-- Sets & rest (v2 flow) -->
+    <string name="finish_set_n">סיימתי סט %1$d/%2$d</string>
+    <string name="finish_last_set">סיימתי סט אחרון</string>
+    <string name="undo_set">בטל סט אחרון</string>
+    <string name="unmark_complete">בטל השלמה</string>
+    <string name="skip_rest">דלג על המנוחה</string>
+    <string name="resting_now">במנוחה…</string>
+    <string name="time_for_set">זמן לסט %1$d מתוך %2$d</string>
+    <string name="rest_before_set">מנוחה לפני סט %1$d/%2$d</string>
+    <string name="set_done">סיימתי סט</string>
+    <string name="seconds_short">שנ׳</string>
+    <string name="working_weight">משקל עבודה</string>
+
+    <!-- Live session -->
+    <string name="workout_in_progress">אימון פעיל</string>
+    <string name="started_at">התחלה %1$s</string>
+    <string name="end_workout">סיים אימון</string>
+    <string name="workout_saved">האימון נשמר בהיסטוריה ✓</string>
+    <string name="session_auto_close_hint">ללא פעילות — האימון ייסגר אוטומטית בעוד %1$d דק׳</string>
+    <string name="total_volume">נפח</string>
+    <string name="total_volume_value">נפח כולל: %1$s ק"ג</string>
+
+    <!-- History -->
+    <string name="workout_history">היסטוריית אימונים</string>
+    <string name="last_workout">האימון האחרון</string>
+    <string name="session_summary_line">%1$d דק׳ · %2$d סטים · %3$d תרגילים הושלמו</string>
+    <string name="today">היום</string>
+    <string name="yesterday">אתמול</string>
+    <string name="days_ago">לפני %1$d ימים</string>
+    <string name="no_history">אין עדיין היסטוריה</string>
+    <string name="no_history_message">סיים סט ראשון והאימון יתחיל להירשם כאן אוטומטית</string>
+    <string name="workouts_this_week">השבוע</string>
+    <string name="total_workouts">סה"כ אימונים</string>
+    <string name="total_sets">סה"כ סטים</string>
+    <string name="total_time">זמן כולל</string>
+    <string name="minutes_short">דק׳</string>
+    <string name="hours_short">ש׳</string>
+    <string name="minutes_value">%1$d דק׳</string>
+    <string name="sets_value">%1$d סטים</string>
+    <string name="delete_session">מחיקת אימון</string>
+    <string name="delete_session_message">האימון יימחק מההיסטוריה. הפעולה בלתי הפיכה.</string>
 </resources>

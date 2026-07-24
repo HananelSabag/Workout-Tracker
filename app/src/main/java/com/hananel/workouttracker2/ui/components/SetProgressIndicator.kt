@@ -22,9 +22,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.hananel.workouttracker2.ui.theme.CompletedGreen
-import com.hananel.workouttracker2.ui.theme.CurrentBlue
-import com.hananel.workouttracker2.ui.theme.PendingGray
+import com.hananel.workouttracker2.ui.theme.Electric
+import com.hananel.workouttracker2.ui.theme.Mint
+import com.hananel.workouttracker2.ui.theme.rememberGlassColors
 
 @Composable
 fun SetProgressIndicator(
@@ -33,6 +33,7 @@ fun SetProgressIndicator(
     totalSets: Int,
     modifier: Modifier = Modifier
 ) {
+    val glass = rememberGlassColors()
     Row(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -45,9 +46,9 @@ fun SetProgressIndicator(
 
             val pillColor by animateColorAsState(
                 targetValue = when {
-                    isDone    -> CompletedGreen
-                    isCurrent -> CurrentBlue
-                    else      -> PendingGray
+                    isDone    -> Mint
+                    isCurrent -> Electric
+                    else      -> glass.onGlassMuted.copy(alpha = 0.35f)
                 },
                 animationSpec = tween(400),
                 label = "pillColor_$index"

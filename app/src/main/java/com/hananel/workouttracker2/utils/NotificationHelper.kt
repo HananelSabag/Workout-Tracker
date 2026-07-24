@@ -20,6 +20,9 @@ class NotificationHelper(private val context: Context) {
         private const val CHANNEL_WORKOUT_REMINDERS = "workout_reminders"
         private const val CHANNEL_TIMER = "timer"
         private const val CHANNEL_WEEKLY = "weekly_updates"
+
+        /** Alerting "rest is over" notification — TimerService clears it when the timer stops. */
+        const val TIMER_COMPLETE_ID = 1002
     }
     
     fun createNotificationChannels() {
@@ -113,7 +116,7 @@ class NotificationHelper(private val context: Context) {
             .setDefaults(NotificationCompat.DEFAULT_SOUND)
             .build()
         
-        notificationManager.notify(1002, notification)
+        notificationManager.notify(TIMER_COMPLETE_ID, notification)
     }
     
     fun showExerciseComplete(exerciseName: String) {

@@ -13,19 +13,24 @@ android {
         applicationId = "com.hananel.workouttracker2"
         minSdk = 33
         targetSdk = 35
-        versionCode = 2
-        versionName = "1.1"
+        versionCode = 3
+        versionName = "2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
         release {
+            // Minification stays off: kotlinx-serialization drives every persisted model here and
+            // an unverified shrink silently breaks DataStore reads.
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Signed with the auto-generated debug key so the APK published in this repo installs
+            // directly on a device. Swap in a real keystore before any Play Store upload.
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
     compileOptions {

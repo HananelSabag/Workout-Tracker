@@ -28,6 +28,7 @@ import androidx.navigation.compose.rememberNavController
 import com.hananel.workouttracker2.data.models.ThemeMode
 import com.hananel.workouttracker2.data.repository.WorkoutRepository
 import com.hananel.workouttracker2.ui.screens.AlarmsScreen
+import com.hananel.workouttracker2.ui.screens.HistoryScreen
 import com.hananel.workouttracker2.ui.screens.OnboardingScreen
 import com.hananel.workouttracker2.ui.screens.SettingsScreen
 import com.hananel.workouttracker2.ui.screens.WorkoutBuilderScreen
@@ -173,17 +174,24 @@ fun AppNavigation(
     val scope = rememberCoroutineScope()
     val repository = remember { WorkoutRepository(context) }
     
+    // One ViewModel for the whole graph: the workout screen and history share the session flows,
+    // and the live session clock must not restart when the user navigates.
+    val sharedViewModel: WorkoutViewModel = remember { WorkoutViewModelFactory(context).create() }
+
     var hasCompletedOnboarding by remember { mutableStateOf<Boolean?>(null) }
-    
+
     LaunchedEffect(Unit) {
         val prefs = repository.getUserPreferences()
         hasCompletedOnboarding = prefs.hasCompletedOnboarding
     }
     
     if (hasCompletedOnboarding == null) {
-        // Loading state
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
+        // Sits on the app backdrop, not a bare Surface — otherwise every cold start flashes a
+        // black rectangle before the first screen paints.
+        com.hananel.workouttracker2.ui.theme.AppBackground {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
         }
         return
     }
@@ -207,13 +215,8 @@ fun AppNavigation(
             )
         }
         composable("workout") {
-            val viewModel: WorkoutViewModel = remember {
-                WorkoutViewModelFactory(context).create()
-            }
-            val repository = remember { WorkoutRepository(context) }
-            
             WorkoutScreen(
-                viewModel = viewModel,
+                viewModel = sharedViewModel,
                 onNavigateToSettings = {
                     navController.navigate("settings")
                 },
@@ -226,29 +229,35 @@ fun AppNavigation(
                 onNavigateToWorkoutBuilder = {
                     navController.navigate("workoutBuilder")
                 },
-                onResetWeekly = {
-                    scope.launch {
-                        repository.resetWeeklyProgress()
-                    }
+                onNavigateToHistory = {
+                    navController.navigate("history")
                 },
                 shouldOpenTimerDialog = shouldOpenTimerDialog,
                 onTimerDialogOpened = onTimerDialogOpened
             )
         }
-        
+
+        composable("history") {
+            // Same ViewModel instance as the workout screen — history reads the session flows it
+            // already collects, so there's nothing to re-load on navigation.
+            val sessions by sharedViewModel.sessionHistory.collectAsState()
+            HistoryScreen(
+                sessions = sessions,
+                onNavigateBack = { navController.popBackStack() },
+                onDeleteSession = { sharedViewModel.deleteSession(it) }
+            )
+        }
+
         composable("exerciseCatalog/{dayId}") { backStackEntry ->
             val dayId = backStackEntry.arguments?.getString("dayId") ?: ""
-            val viewModel: WorkoutViewModel = remember {
-                WorkoutViewModelFactory(context).create()
-            }
-            
+
             com.hananel.workouttracker2.ui.screens.ExerciseCatalogScreen(
                 dayId = dayId,
                 onNavigateBack = {
                     navController.popBackStack()
                 },
                 onExerciseSelected = { bankItem ->
-                    viewModel.addExerciseFromBank(dayId, bankItem)
+                    sharedViewModel.addExerciseFromBank(dayId, bankItem)
                     navController.popBackStack()
                 }
             )

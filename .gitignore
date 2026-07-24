@@ -18,6 +18,8 @@ Workout-Tracker/
 *.apk
 *.ap_
 *.aab
+# ...except the release build shipped at the repo root for direct install
+!/WorkoutTracker-*.apk
 
 # Files for the ART/Dalvik VM
 *.dex

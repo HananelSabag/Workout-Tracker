@@ -19,6 +19,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.hananel.workouttracker2.R
+import com.hananel.workouttracker2.ui.theme.rememberGlassColors
 
 /**
  * Bottom sheet that lets the user pick how to add an exercise — create from scratch
@@ -31,26 +32,11 @@ fun AddExerciseMenu(
     onCreateNew: () -> Unit,
     onChooseFromCatalog: () -> Unit
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surface
+    GlassSheet(
+        title = stringResource(R.string.add_exercise),
+        icon = Icons.Default.Add,
+        onDismiss = onDismiss
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 24.dp, top = 4.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.add_exercise),
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
-            )
-
             AddExerciseOptionTile(
                 icon = Icons.AutoMirrored.Filled.List,
                 tint = MaterialTheme.colorScheme.secondary,
@@ -69,10 +55,9 @@ fun AddExerciseMenu(
                 subtitle = stringResource(R.string.create_new_exercise_desc),
                 onClick = {
                     onDismiss()
-                    onCreateNew()
-                }
-            )
-        }
+                onCreateNew()
+            }
+        )
     }
 }
 
@@ -84,11 +69,11 @@ private fun AddExerciseOptionTile(
     subtitle: String,
     onClick: () -> Unit
 ) {
+    val glass = rememberGlassColors()
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(18.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-        tonalElevation = 1.dp,
+        color = glass.onGlass.copy(alpha = 0.05f),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(

@@ -16,6 +16,9 @@ data class UserPreferences(
     val enabledDays: List<Int> = listOf(0, 1, 2, 3, 4, 5, 6), // All days enabled by default
     val autoOpenCurrentDay: Boolean = true, // Default: enabled (current behavior)
     val lastViewedDayIndex: Int = 0, // Persist last viewed day
+    // Sunday is index 0, so lastViewedDayIndex alone can't tell "never picked a day" apart from
+    // "picked Sunday" — which made the app jump off Sunday on every relaunch.
+    val hasViewedAnyDay: Boolean = false,
     val hasCompletedOnboarding: Boolean = false // First launch detection
 ) {
     fun getThemeMode(): ThemeMode {

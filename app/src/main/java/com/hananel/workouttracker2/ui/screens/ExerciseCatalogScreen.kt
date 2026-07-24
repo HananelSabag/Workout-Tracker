@@ -65,21 +65,31 @@ fun ExerciseCatalogScreen(
         else pool.filter { context.getString(it.nameResId).contains(query, ignoreCase = true) }
     }
 
+    val glass = com.hananel.workouttracker2.ui.theme.rememberGlassColors()
+
+    com.hananel.workouttracker2.ui.theme.AppBackground {
     Scaffold(
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.exercise_catalog), fontWeight = FontWeight.Bold) },
+                title = {
+                    Text(
+                        stringResource(R.string.exercise_catalog),
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = glass.onGlass
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.back)
+                            contentDescription = stringResource(R.string.back),
+                            tint = glass.onGlass
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    containerColor = androidx.compose.ui.graphics.Color.Transparent
                 )
             )
         },
@@ -166,6 +176,7 @@ fun ExerciseCatalogScreen(
                 }
             }
         }
+    }
     }
 }
 

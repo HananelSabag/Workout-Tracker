@@ -1,14 +1,19 @@
 package com.hananel.workouttracker2.ui.components
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.FastForward
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -28,90 +33,91 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hananel.workouttracker2.R
 import com.hananel.workouttracker2.data.models.TimerState
+import com.hananel.workouttracker2.ui.theme.AccentGradient
+import com.hananel.workouttracker2.ui.theme.Amber
+import com.hananel.workouttracker2.ui.theme.Mint
+import com.hananel.workouttracker2.ui.theme.SuccessGradient
+import com.hananel.workouttracker2.ui.theme.chipTint
+import com.hananel.workouttracker2.ui.theme.glassSheetColor
+import com.hananel.workouttracker2.ui.theme.rememberGlassColors
 
 /**
- * Modern ModalBottomSheet timer — slides up from the bottom.
- * Replaces the old center-screen Dialog with a more natural mobile UX.
+ * Rest timer sheet.
+ *
+ * While the countdown runs the primary action skips the rest; once it finishes the primary action
+ * logs the set the user has just performed — the same repository call the card uses, so the two
+ * can't disagree about how many sets are done.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TimerBottomSheet(
     timerState: TimerState,
-    onNextSet: () -> Unit,
-    onFinish: () -> Unit,
+    onCompleteSet: () -> Unit,
+    onSkipRest: () -> Unit,
+    onPauseResume: () -> Unit,
     onStop: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val glass = rememberGlassColors()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
+        containerColor = glassSheetColor(),
+        shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp),
         dragHandle = {
-            // Custom drag handle with a pill shape
             Box(
                 modifier = Modifier
-                    .padding(top = 12.dp, bottom = 4.dp)
-                    .size(width = 40.dp, height = 4.dp)
+                    .padding(top = 14.dp, bottom = 2.dp)
+                    .size(width = 44.dp, height = 5.dp)
                     .clip(CircleShape)
-                    .let { m ->
-                        m // background handled by ModalBottomSheet's containerColor
-                    }
-            ) {
-                HorizontalDivider(
-                    modifier = Modifier.fillMaxWidth(),
-                    thickness = 4.dp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
-                )
-            }
+                    .background(glass.onGlassMuted.copy(alpha = 0.35f))
+            )
         },
-        containerColor = MaterialTheme.colorScheme.surface,
         modifier = modifier
     ) {
-        TimerBottomSheetContent(
+        TimerSheetContent(
             timerState = timerState,
-            onNextSet = onNextSet,
-            onFinish = onFinish,
+            onCompleteSet = onCompleteSet,
+            onSkipRest = onSkipRest,
+            onPauseResume = onPauseResume,
             onStop = onStop
         )
     }
 }
 
 @Composable
-private fun TimerBottomSheetContent(
+private fun TimerSheetContent(
     timerState: TimerState,
-    onNextSet: () -> Unit,
-    onFinish: () -> Unit,
+    onCompleteSet: () -> Unit,
+    onSkipRest: () -> Unit,
+    onPauseResume: () -> Unit,
     onStop: () -> Unit
 ) {
+    val glass = rememberGlassColors()
     val timeLeft = timerState.timeLeft
-    val isLastSet = timerState.currentSet >= timerState.totalSets
-    // Trust the explicit flag from the service. Falls back to the legacy condition for any
-    // TimerState persisted before isRestComplete was introduced.
-    val isRestComplete = timerState.isRestComplete || (timeLeft == 0 && !timerState.isRunning)
+    // Trust the explicit flag; fall back to the legacy condition for states persisted before it.
+    val isRestComplete = timerState.isRestComplete || (timeLeft == 0 && !timerState.isRunning && !timerState.isPaused)
+    val isPaused = timerState.isPaused
+    val nextSet = timerState.nextSet
 
-    // Smooth color transition: blue (running) → green (complete)
-    val accentColor by animateColorAsState(
-        targetValue = if (isRestComplete) Color(0xFF10B981) else Color(0xFF3B82F6),
+    val accent by animateColorAsState(
+        targetValue = when {
+            isRestComplete -> Mint
+            isPaused -> glass.onGlassMuted
+            else -> Amber
+        },
         animationSpec = tween(600),
-        label = "accentColor"
-    )
-    val accentColorDark by animateColorAsState(
-        targetValue = if (isRestComplete) Color(0xFF059669) else Color(0xFF2563EB),
-        animationSpec = tween(600),
-        label = "accentColorDark"
+        label = "timerAccent"
     )
 
-    // Pulse scale animation when rest is complete
-    val infiniteTransition = rememberInfiniteTransition(label = "timerPulse")
-    val pulseScale by infiniteTransition.animateFloat(
+    val pulse = rememberInfiniteTransition(label = "timerPulse")
+    val pulseScale by pulse.animateFloat(
         initialValue = 1f,
-        targetValue = if (isRestComplete) 1.06f else 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(800, easing = EaseInOut),
-            repeatMode = RepeatMode.Reverse
-        ),
+        targetValue = if (isRestComplete) 1.05f else 1f,
+        animationSpec = infiniteRepeatable(tween(850, easing = EaseInOut), RepeatMode.Reverse),
         label = "pulseScale"
     )
 
@@ -122,176 +128,135 @@ private fun TimerBottomSheetContent(
             .padding(bottom = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // ── Header ────────────────────────────────────────────────────────────
-        Box(
+        // ── Header ──────────────────────────────────────────────────────────
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
+                .padding(top = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.rest_timer),
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = glass.onGlass
+                )
+                Text(
+                    text = timerState.exerciseName,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = glass.onGlassMuted
+                )
+            }
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(20.dp))
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(chipTint(accent))
+                    .border(1.dp, accent.copy(alpha = 0.3f), RoundedCornerShape(14.dp))
+                    .padding(horizontal = 14.dp, vertical = 8.dp)
             ) {
-                // Gradient header strip
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    color = Color.Transparent
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .let { m ->
-                                m // gradient drawn by Canvas below for animatable colors
-                            }
-                    ) {
-                        Canvas(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(72.dp)
-                        ) {
-                            drawRect(
-                                brush = Brush.horizontalGradient(
-                                    listOf(accentColor, accentColorDark)
-                                )
-                            )
-                        }
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 20.dp, vertical = 16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Column {
-                                Text(
-                                    text = stringResource(R.string.rest_timer),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
-                                )
-                                Text(
-                                    text = timerState.exerciseName,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = Color.White.copy(alpha = 0.85f)
-                                )
-                            }
-                            // Set badge
-                            Surface(
-                                shape = RoundedCornerShape(20.dp),
-                                color = Color.White.copy(alpha = 0.2f)
-                            ) {
-                                Text(
-                                    text = stringResource(
-                                        R.string.set_of,
-                                        timerState.currentSet,
-                                        timerState.totalSets
-                                    ),
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White,
-                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
-                                )
-                            }
-                        }
-                    }
-                }
+                Text(
+                    text = stringResource(R.string.set_of, nextSet, timerState.totalSets),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = accent
+                )
             }
         }
 
-        Spacer(modifier = Modifier.height(28.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-        // ── Circular Timer ────────────────────────────────────────────────────
+        // ── Circular countdown ──────────────────────────────────────────────
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
-                .size(200.dp)
+                .size(210.dp)
                 .scale(if (isRestComplete) pulseScale else 1f)
         ) {
             CircularTimerArc(
                 timeLeft = timeLeft,
                 totalTime = timerState.totalTime,
-                arcColor = accentColor,
+                arcColor = accent,
+                trackColor = glass.onGlassMuted.copy(alpha = 0.18f),
                 modifier = Modifier.fillMaxSize()
             )
 
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = formatTime(timeLeft),
-                    fontSize = 48.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (isRestComplete) accentColor else MaterialTheme.colorScheme.onSurface,
-                    lineHeight = 48.sp
-                )
-                if (isRestComplete) {
+                AnimatedContent(targetState = formatTime(timeLeft), label = "timeText") { text ->
                     Text(
-                        text = if (isLastSet)
-                            stringResource(R.string.all_sets_completed)
-                        else
-                            stringResource(R.string.rest_complete),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = accentColor,
-                        fontWeight = FontWeight.SemiBold
+                        text = text,
+                        fontSize = 52.sp,
+                        fontWeight = FontWeight.Black,
+                        color = if (isRestComplete) accent else glass.onGlass,
+                        lineHeight = 54.sp
                     )
                 }
+                Text(
+                    text = when {
+                        isRestComplete -> stringResource(R.string.rest_complete)
+                        isPaused -> stringResource(R.string.paused)
+                        else -> stringResource(R.string.resting_now)
+                    },
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (isRestComplete) accent else glass.onGlassMuted
+                )
             }
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(18.dp))
 
-        // ── Set Progress Dots ─────────────────────────────────────────────────
         SetProgressIndicator(
             completedSets = timerState.completedSets,
-            currentSet = timerState.currentSet,
+            currentSet = nextSet,
             totalSets = timerState.totalSets
         )
 
-        Spacer(modifier = Modifier.height(28.dp))
+        Spacer(modifier = Modifier.height(26.dp))
 
-        // ── Primary Action Button ─────────────────────────────────────────────
-        Button(
-            onClick = { if (isLastSet) onFinish() else onNextSet() },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
-            shape = RoundedCornerShape(18.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = accentColor
-            ),
-            elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
-        ) {
-            Icon(
-                imageVector = if (isLastSet) Icons.Default.Check else Icons.Default.SkipNext,
-                contentDescription = null,
-                modifier = Modifier.size(22.dp)
+        // ── Actions ─────────────────────────────────────────────────────────
+        if (isRestComplete) {
+            GradientButton(
+                text = stringResource(R.string.finish_set_n, nextSet, timerState.totalSets),
+                icon = Icons.Default.Check,
+                gradient = SuccessGradient,
+                onClick = onCompleteSet,
+                modifier = Modifier.fillMaxWidth(),
+                height = 56.dp,
+                fontSize = 16
             )
-            Spacer(modifier = Modifier.width(10.dp))
-            Text(
-                text = if (isLastSet) stringResource(R.string.finish) else stringResource(R.string.next_set),
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp
+        } else {
+            GradientButton(
+                text = stringResource(R.string.skip_rest),
+                icon = Icons.Default.FastForward,
+                gradient = AccentGradient,
+                onClick = onSkipRest,
+                modifier = Modifier.fillMaxWidth(),
+                height = 56.dp,
+                fontSize = 16
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            GhostButton(
+                text = if (isPaused) stringResource(R.string.resume) else stringResource(R.string.pause),
+                icon = if (isPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
+                onClick = onPauseResume,
+                modifier = Modifier.fillMaxWidth(),
+                height = 48.dp
             )
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(6.dp))
 
-        // ── Stop (destructive, less prominent) ───────────────────────────────
-        TextButton(
-            onClick = onStop,
-            modifier = Modifier.fillMaxWidth()
-        ) {
+        TextButton(onClick = onStop, modifier = Modifier.fillMaxWidth()) {
             Icon(
                 imageVector = Icons.Default.Stop,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
+                tint = MaterialTheme.colorScheme.error.copy(alpha = 0.75f),
                 modifier = Modifier.size(18.dp)
             )
             Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = stringResource(R.string.stop),
-                color = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
-                fontWeight = FontWeight.Medium
+                color = MaterialTheme.colorScheme.error.copy(alpha = 0.75f),
+                fontWeight = FontWeight.SemiBold
             )
         }
     }
@@ -302,30 +267,26 @@ private fun CircularTimerArc(
     timeLeft: Int,
     totalTime: Int,
     arcColor: Color,
+    trackColor: Color,
     modifier: Modifier = Modifier
 ) {
     val progress = if (totalTime > 0) timeLeft.toFloat() / totalTime.toFloat() else 0f
-    val backgroundColor = MaterialTheme.colorScheme.surfaceVariant
-
     val animatedProgress by animateFloatAsState(
         targetValue = progress,
         animationSpec = tween(400),
         label = "arcProgress"
     )
+    val sweepBrush = Brush.sweepGradient(listOf(arcColor, arcColor.copy(alpha = 0.55f), arcColor))
 
     Canvas(modifier = modifier) {
-        val strokeWidth = 14.dp.toPx()
-        val glowWidth = 22.dp.toPx()
+        val strokeWidth = 15.dp.toPx()
+        val glowWidth = 26.dp.toPx()
         val diameter = size.minDimension - strokeWidth
-        val topLeft = Offset(
-            x = (size.width - diameter) / 2f,
-            y = (size.height - diameter) / 2f
-        )
+        val topLeft = Offset((size.width - diameter) / 2f, (size.height - diameter) / 2f)
         val arcSize = Size(diameter, diameter)
 
-        // Background track
         drawArc(
-            color = backgroundColor,
+            color = trackColor,
             startAngle = -90f,
             sweepAngle = 360f,
             useCenter = false,
@@ -334,10 +295,10 @@ private fun CircularTimerArc(
             style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
         )
 
-        // Glow layer (wider, very transparent)
         if (animatedProgress > 0f) {
+            // Wide, faint pass first — reads as a glow bleeding through the glass.
             drawArc(
-                color = arcColor.copy(alpha = 0.15f),
+                color = arcColor.copy(alpha = 0.18f),
                 startAngle = -90f,
                 sweepAngle = 360f * animatedProgress,
                 useCenter = false,
@@ -345,12 +306,8 @@ private fun CircularTimerArc(
                 size = arcSize,
                 style = Stroke(width = glowWidth, cap = StrokeCap.Round)
             )
-        }
-
-        // Main progress arc
-        if (animatedProgress > 0f) {
             drawArc(
-                color = arcColor,
+                brush = sweepBrush,
                 startAngle = -90f,
                 sweepAngle = 360f * animatedProgress,
                 useCenter = false,
@@ -362,30 +319,4 @@ private fun CircularTimerArc(
     }
 }
 
-private fun formatTime(seconds: Int): String {
-    val mins = seconds / 60
-    val secs = seconds % 60
-    return "%d:%02d".format(mins, secs)
-}
-
-// ── Legacy alias — keeps backward compatibility if TimerDialog is referenced elsewhere ──
-@Suppress("unused")
-@Composable
-fun TimerDialog(
-    timerState: TimerState,
-    onNextSet: () -> Unit,
-    onFinish: () -> Unit,
-    onStop: () -> Unit,
-    onClose: () -> Unit,
-    onTimerTick: (Int) -> Unit = {},
-    modifier: Modifier = Modifier
-) {
-    TimerBottomSheet(
-        timerState = timerState,
-        onNextSet = onNextSet,
-        onFinish = onFinish,
-        onStop = onStop,
-        onDismiss = onClose,
-        modifier = modifier
-    )
-}
+private fun formatTime(seconds: Int): String = "%d:%02d".format(seconds / 60, seconds % 60)

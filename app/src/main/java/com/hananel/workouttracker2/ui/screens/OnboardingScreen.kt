@@ -54,10 +54,7 @@ fun OnboardingScreen(
     val pagerState = rememberPagerState(pageCount = { 2 })
     val scope = rememberCoroutineScope()
     
-    Surface(
-        modifier = modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
-    ) {
+    com.hananel.workouttracker2.ui.theme.AppBackground(modifier = modifier) {
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
@@ -258,8 +255,11 @@ private fun OnboardingPage1(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(
+                        // Translucent tint rather than a hardcoded light-green fill — the solid
+                        // colour left the title unreadable in dark mode.
                         containerColor = if (notificationPermissionGranted)
-                            Color(0xFFF0FDF4) else MaterialTheme.colorScheme.surfaceVariant
+                            Color(0xFF10B981).copy(alpha = 0.16f)
+                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
                     ),
                     elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {

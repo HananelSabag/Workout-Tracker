@@ -335,5 +335,46 @@
     <string name="no_workout_structure">No Workout Plan</string>
     <string name="no_workout_structure_message">Get started by setting up your workout days and exercises</string>
     <string name="setup_workout_plan">Setup Workout Plan</string>
-</resources>
 
+    <!-- Sets & rest (v2 flow) -->
+    <string name="finish_set_n">Set %1$d/%2$d done</string>
+    <string name="finish_last_set">Finish last set</string>
+    <string name="undo_set">Undo last set</string>
+    <string name="unmark_complete">Unmark complete</string>
+    <string name="skip_rest">Skip rest</string>
+    <string name="resting_now">Resting…</string>
+    <string name="time_for_set">Time for set %1$d of %2$d</string>
+    <string name="rest_before_set">Rest before set %1$d/%2$d</string>
+    <string name="set_done">Set done</string>
+    <string name="seconds_short">s</string>
+    <string name="working_weight">Working weight</string>
+
+    <!-- Live session -->
+    <string name="workout_in_progress">Workout in progress</string>
+    <string name="started_at">Started %1$s</string>
+    <string name="end_workout">End workout</string>
+    <string name="workout_saved">Workout saved to history ✓</string>
+    <string name="session_auto_close_hint">No activity — this workout closes automatically in %1$d min</string>
+    <string name="total_volume">Volume</string>
+    <string name="total_volume_value">Total volume: %1$s kg</string>
+
+    <!-- History -->
+    <string name="workout_history">Workout history</string>
+    <string name="last_workout">Last workout</string>
+    <string name="session_summary_line">%1$d min · %2$d sets · %3$d exercises done</string>
+    <string name="today">Today</string>
+    <string name="yesterday">Yesterday</string>
+    <string name="days_ago">%1$d days ago</string>
+    <string name="no_history">No history yet</string>
+    <string name="no_history_message">Finish your first set and workouts start logging here automatically</string>
+    <string name="workouts_this_week">This week</string>
+    <string name="total_workouts">Workouts</string>
+    <string name="total_sets">Total sets</string>
+    <string name="total_time">Total time</string>
+    <string name="minutes_short">m</string>
+    <string name="hours_short">h</string>
+    <string name="minutes_value">%1$d min</string>
+    <string name="sets_value">%1$d sets</string>
+    <string name="delete_session">Delete workout</string>
+    <string name="delete_session_message">This workout will be removed from history. This cannot be undone.</string>
+</resources>
