@@ -8,11 +8,13 @@ import com.hananel.workouttracker2.data.models.Exercise
 import com.hananel.workouttracker2.data.models.TimerState
 import com.hananel.workouttracker2.data.models.WorkoutDay
 import com.hananel.workouttracker2.data.models.WorkoutProgress
+import com.hananel.workouttracker2.data.models.SessionExerciseLog
 import com.hananel.workouttracker2.data.models.WorkoutSession
 import com.hananel.workouttracker2.data.repository.SessionContext
 import com.hananel.workouttracker2.data.repository.WorkoutRepository
 import com.hananel.workouttracker2.service.TimerService
 import com.hananel.workouttracker2.utils.DateUtils
+import com.hananel.workouttracker2.utils.RepsUtils
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -149,6 +151,8 @@ class WorkoutViewModel(
             repository.getWorkoutStructureFlow().collect { savedStructure ->
                 if (isWorkoutDataValid(savedStructure)) {
                     _workoutDays.value = savedStructure
+                    // Covers app launch, where the structure arrives after the initial day is set.
+                    startFreshDayIfNeeded(_selectedDayIndex.value)
                 } else {
                     // Corrupted — clear progress and timer state too, they're just as stale.
                     repository.clearAllProgressAndTimerState()
@@ -177,7 +181,22 @@ class WorkoutViewModel(
 
     fun selectDay(dayIndex: Int) {
         _selectedDayIndex.value = dayIndex
-        viewModelScope.launch { repository.updateLastViewedDay(dayIndex) }
+        viewModelScope.launch {
+            repository.updateLastViewedDay(dayIndex)
+            startFreshDayIfNeeded(dayIndex)
+        }
+    }
+
+    /**
+     * Clears a day's checkmarks when they were earned on an earlier date.
+     *
+     * Progress used to live for a whole week, so coming back to Sunday next Sunday showed an
+     * exercise already sitting at 3/5. Every visit to a day on a new date now starts from zero —
+     * except while that day's workout is actually running, so a session crossing midnight survives.
+     */
+    private suspend fun startFreshDayIfNeeded(dayIndex: Int) {
+        val day = _workoutDays.value.find { it.dayIndex == dayIndex } ?: return
+        repository.startFreshDayIfNeeded(day.id, day.exercises.map { it.id })
     }
 
     fun getCurrentDayWorkout(): WorkoutDay? =
@@ -237,7 +256,10 @@ class WorkoutViewModel(
             val result = repository.completeSet(
                 exerciseId = exercise.id,
                 totalSets = exercise.sets,
-                ctx = ctx
+                ctx = ctx,
+                // Pre-filled from the plan so logging a set stays a single tap; the rest timer
+                // offers a stepper for the times you managed more or fewer.
+                reps = RepsUtils.targetReps(exercise.reps)
             )
 
             // No rest after the final set — the exercise is already done, a countdown would just
@@ -297,6 +319,63 @@ class WorkoutViewModel(
 
     fun skipRest(context: Context) = TimerService.skipRest(context)
 
+    /**
+     * Repairs a countdown whose process was killed mid-rest.
+     *
+     * A CountDownTimer doesn't survive the OS reclaiming the app, so the persisted state comes back
+     * frozen at whatever second it stopped on and would never finish. The stored deadline says what
+     * really happened: either the rest is already over, or there's time left worth resuming.
+     */
+    fun recoverTimerIfInterrupted(context: Context) {
+        viewModelScope.launch {
+            val state = repository.getTimerState() ?: return@launch
+            if (!state.isRunning || state.isPaused || state.isRestComplete) return@launch
+            if (TimerService.isRunning) return@launch // Countdown is alive; nothing to repair.
+
+            // A state written before deadlines existed (upgrade from an older build) has no way to
+            // resume, and leaving it would strand a countdown that can never reach zero.
+            if (state.endsAtEpochMs <= 0L) {
+                repository.saveTimerState(
+                    state.copy(timeLeft = 0, isRunning = false, isRestComplete = true)
+                )
+                return@launch
+            }
+
+            val remaining = ((state.endsAtEpochMs - System.currentTimeMillis()) / 1000L).toInt()
+            if (remaining > 0) {
+                TimerService.startRest(
+                    context = context,
+                    exerciseName = state.exerciseName,
+                    exerciseId = state.exerciseId,
+                    restTime = remaining,
+                    completedSets = state.completedSets,
+                    totalSets = state.totalSets,
+                    dayIndex = state.dayIndex,
+                    dayId = state.dayId,
+                    dayName = state.dayName,
+                    plannedExercises = state.plannedExercises,
+                    reps = state.reps,
+                    totalTime = state.totalTime
+                )
+            } else {
+                repository.saveTimerState(
+                    state.copy(timeLeft = 0, isRunning = false, isRestComplete = true)
+                )
+            }
+        }
+    }
+
+    /** Adjusts the reps recorded for the set that just finished. */
+    fun setLastSetReps(exerciseId: String, reps: Int) {
+        viewModelScope.launch { repository.updateLastSetReps(exerciseId, reps) }
+    }
+
+    /** Reps logged for the set the current rest belongs to, for the timer sheet's stepper. */
+    fun lastLoggedReps(exerciseId: String): Int =
+        _activeSession.value?.exercises
+            ?.firstOrNull { it.exerciseId == exerciseId }
+            ?.repsPerSet?.lastOrNull() ?: 0
+
     fun stopTimer(context: Context) = TimerService.stopTimer(context)
 
     fun pauseResumeTimer(context: Context) {
@@ -334,6 +413,16 @@ class WorkoutViewModel(
     /** Most recent finished session for a given weekday — powers the "last time" comparison. */
     fun lastSessionForDay(dayIndex: Int): WorkoutSession? =
         _sessionHistory.value.firstOrNull { it.dayIndex == dayIndex }
+
+    /**
+     * What this exercise looked like the last time it was trained. Shown on the card so the answer
+     * to "what did I lift last week" is already on screen instead of a trip through history.
+     */
+    fun previousLogFor(exerciseId: String): SessionExerciseLog? =
+        _sessionHistory.value
+            .firstNotNullOfOrNull { session ->
+                session.exercises.firstOrNull { it.exerciseId == exerciseId && it.completedSets > 0 }
+            }
 
     fun resetWeeklyProgress() {
         viewModelScope.launch { repository.resetWeeklyProgress() }

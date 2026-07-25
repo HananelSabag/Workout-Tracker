@@ -275,6 +275,7 @@ class WorkoutRepository(private val context: Context) {
         exerciseId: String,
         totalSets: Int,
         ctx: SessionContext,
+        reps: Int = 0,
         now: Long = System.currentTimeMillis()
     ): SetResult {
         var result = SetResult(0, false)
@@ -289,6 +290,9 @@ class WorkoutRepository(private val context: Context) {
                 progress.copy(
                     exerciseCompletedSets = progress.exerciseCompletedSets + (exerciseId to next),
                     completedExercises = progress.completedExercises + (exerciseId to isComplete),
+                    // Claim the day for today so the fresh-day reset leaves this workout alone.
+                    dayTrainingDates = if (ctx.dayId.isBlank()) progress.dayTrainingDates
+                    else progress.dayTrainingDates + (ctx.dayId to DateUtils.toIso(now)),
                     lastUpdateTime = now
                 )
             )
@@ -305,7 +309,8 @@ class WorkoutRepository(private val context: Context) {
                         weight = weight,
                         completed = isComplete,
                         firstSetTime = if (entry.firstSetTime == 0L) now else entry.firstSetTime,
-                        lastSetTime = now
+                        lastSetTime = now,
+                        repsPerSet = (entry.repsPerSet + reps).takeLast(next)
                     )
                 },
                 seed = {
@@ -321,6 +326,62 @@ class WorkoutRepository(private val context: Context) {
             result = SetResult(next, isComplete)
         }
         return result
+    }
+
+    /** Corrects the rep count of the set just logged, from the rest timer. */
+    suspend fun updateLastSetReps(exerciseId: String, reps: Int) {
+        context.dataStore.edit { prefs ->
+            val active = prefs.readActiveSession() ?: return@edit
+            prefs.writeActiveSession(
+                active.copy(
+                    exercises = active.exercises.map { entry ->
+                        if (entry.exerciseId != exerciseId || entry.repsPerSet.isEmpty()) entry
+                        else entry.copy(
+                            repsPerSet = entry.repsPerSet.dropLast(1) + reps.coerceIn(0, 999)
+                        )
+                    }
+                )
+            )
+        }
+    }
+
+    /**
+     * Wipes a workout day's checkmarks when they belong to an earlier date, so every session starts
+     * from zero. Skipped while that day has a live session — a workout running past midnight must
+     * not reset itself out from under the user.
+     *
+     * Returns true if anything was cleared.
+     */
+    suspend fun startFreshDayIfNeeded(
+        dayId: String,
+        exerciseIds: List<String>,
+        now: Long = System.currentTimeMillis()
+    ): Boolean {
+        if (dayId.isBlank()) return false
+        var cleared = false
+        context.dataStore.edit { prefs ->
+            val today = DateUtils.toIso(now)
+            val progress = prefs.readProgress()
+            if (progress.dayTrainingDates[dayId] == today) return@edit
+
+            val active = prefs.readActiveSession()
+            if (active != null && active.dayId == dayId && !active.isStaleAt(now)) return@edit
+
+            val hasProgress = exerciseIds.any {
+                (progress.exerciseCompletedSets[it] ?: 0) > 0 || progress.completedExercises[it] == true
+            }
+
+            prefs[WORKOUT_PROGRESS_KEY] = json.encodeToString(
+                progress.copy(
+                    exerciseCompletedSets = progress.exerciseCompletedSets - exerciseIds.toSet(),
+                    completedExercises = progress.completedExercises - exerciseIds.toSet(),
+                    dayTrainingDates = progress.dayTrainingDates + (dayId to today),
+                    lastUpdateTime = now
+                )
+            )
+            cleared = hasProgress
+        }
+        return cleared
     }
 
     /** Steps one set back. Used by the card's undo affordance. */
@@ -350,7 +411,11 @@ class WorkoutRepository(private val context: Context) {
                     active.copy(
                         exercises = active.exercises.map {
                             if (it.exerciseId == exerciseId)
-                                it.copy(completedSets = next, completed = isComplete)
+                                it.copy(
+                                    completedSets = next,
+                                    completed = isComplete,
+                                    repsPerSet = it.repsPerSet.dropLast(1)
+                                )
                             else it
                         },
                         lastActivityTime = now
@@ -382,6 +447,8 @@ class WorkoutRepository(private val context: Context) {
                 progress.copy(
                     exerciseCompletedSets = progress.exerciseCompletedSets + (exerciseId to sets),
                     completedExercises = progress.completedExercises + (exerciseId to completed),
+                    dayTrainingDates = if (!completed || ctx.dayId.isBlank()) progress.dayTrainingDates
+                    else progress.dayTrainingDates + (ctx.dayId to DateUtils.toIso(now)),
                     lastUpdateTime = now
                 )
             )

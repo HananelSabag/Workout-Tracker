@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hananel.workouttracker2.R
@@ -48,6 +49,7 @@ import com.hananel.workouttracker2.ui.theme.Mint
 import com.hananel.workouttracker2.ui.theme.Violet
 import com.hananel.workouttracker2.ui.theme.rememberGlassColors
 import com.hananel.workouttracker2.utils.DateUtils
+import com.hananel.workouttracker2.utils.RepsUtils
 
 /**
  * Workout history — "what did I do last time".
@@ -358,13 +360,16 @@ private fun SessionStat(icon: ImageVector, text: String, tint: Color, modifier: 
 @Composable
 private fun ExerciseLogRow(entry: SessionExerciseLog) {
     val glass = rememberGlassColors()
+    val repsBreakdown = RepsUtils.formatSetReps(entry.repsPerSet)
+
     Row(
         modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Box(
             modifier = Modifier
+                .padding(top = 2.dp)
                 .size(18.dp)
                 .clip(CircleShape)
                 .background(if (entry.completed) Mint else glass.onGlassMuted.copy(alpha = 0.2f)),
@@ -379,13 +384,24 @@ private fun ExerciseLogRow(entry: SessionExerciseLog) {
                 )
             }
         }
-        Text(
-            text = entry.name,
-            style = MaterialTheme.typography.bodyMedium,
-            color = glass.onGlass,
-            modifier = Modifier.weight(1f),
-            maxLines = 1
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = entry.name,
+                style = MaterialTheme.typography.bodyMedium,
+                color = glass.onGlass,
+                maxLines = 1
+            )
+            // The actual per-set reps — the whole point of the log is answering "what did I do
+            // last time", which a sets-only count can't.
+            if (repsBreakdown.isNotBlank()) {
+                Text(
+                    text = repsBreakdown,
+                    // A run of numbers; bidi would otherwise reorder the sets in Hebrew.
+                    style = MaterialTheme.typography.labelSmall.copy(textDirection = TextDirection.Ltr),
+                    color = glass.onGlassMuted
+                )
+            }
+        }
         Text(
             text = buildString {
                 append("${entry.completedSets}/${entry.plannedSets}")

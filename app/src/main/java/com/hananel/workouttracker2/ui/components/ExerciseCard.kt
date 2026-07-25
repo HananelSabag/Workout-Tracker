@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Timer
@@ -40,11 +41,13 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hananel.workouttracker2.R
 import com.hananel.workouttracker2.data.models.Exercise
+import com.hananel.workouttracker2.data.models.SessionExerciseLog
 import com.hananel.workouttracker2.ui.theme.AccentGradient
 import com.hananel.workouttracker2.ui.theme.Amber
 import com.hananel.workouttracker2.ui.theme.Electric
@@ -54,6 +57,7 @@ import com.hananel.workouttracker2.ui.theme.SuccessGradient
 import com.hananel.workouttracker2.ui.theme.Violet
 import com.hananel.workouttracker2.ui.theme.chipTint
 import com.hananel.workouttracker2.ui.theme.rememberGlassColors
+import com.hananel.workouttracker2.utils.RepsUtils
 
 /**
  * Exercise card.
@@ -79,6 +83,7 @@ fun ExerciseCard(
     restTotalTime: Int = 0,
     isRestRunningForThis: Boolean = false,
     isRestCompleteForThis: Boolean = false,
+    previousLog: SessionExerciseLog? = null,
     onSkipRest: () -> Unit = {},
     onEditExercise: ((sets: Int, reps: String, restTime: Int, weight: Float) -> Unit)? = null,
     onDeleteExercise: (() -> Unit)? = null
@@ -219,6 +224,11 @@ fun ExerciseCard(
                 }
             }
 
+            // ── What happened last time ─────────────────────────────────────
+            if (previousLog != null && previousLog.completedSets > 0) {
+                PreviousSessionLine(log = previousLog)
+            }
+
             // ── Set progress ────────────────────────────────────────────────
             SetTrack(
                 completedSets = completedSets,
@@ -325,6 +335,55 @@ private fun CompletionBadge(onClick: () -> Unit) {
                 contentDescription = null,
                 tint = Color.White,
                 modifier = Modifier.size(22.dp)
+            )
+        }
+    }
+}
+
+/**
+ * One quiet line of the previous session's numbers. This is the question every lifter asks between
+ * sets, and it used to require digging through history.
+ */
+@Composable
+private fun PreviousSessionLine(log: SessionExerciseLog) {
+    val glass = rememberGlassColors()
+    val reps = RepsUtils.formatSetReps(log.repsPerSet)
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(glass.onGlass.copy(alpha = 0.04f))
+            .padding(horizontal = 10.dp, vertical = 7.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Default.History,
+            contentDescription = null,
+            tint = glass.onGlassMuted,
+            modifier = Modifier.size(14.dp)
+        )
+        Text(
+            text = stringResource(R.string.last_time),
+            style = MaterialTheme.typography.labelSmall,
+            color = glass.onGlassMuted
+        )
+        Text(
+            text = buildString {
+                append(if (reps.isNotBlank()) reps else "${log.completedSets}×")
+                if (log.weight > 0f) append("  ·  ${formatWeightValue(log.weight)}")
+            },
+            // Numbers only — keep them left-to-right under Hebrew.
+            style = MaterialTheme.typography.labelMedium.copy(textDirection = TextDirection.Ltr),
+            color = glass.onGlass,
+            modifier = Modifier.weight(1f)
+        )
+        if (log.weight > 0f) {
+            Text(
+                text = stringResource(R.string.kg),
+                style = MaterialTheme.typography.labelSmall,
+                color = glass.onGlassMuted
             )
         }
     }

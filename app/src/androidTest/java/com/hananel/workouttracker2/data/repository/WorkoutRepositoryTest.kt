@@ -248,6 +248,107 @@ class WorkoutRepositoryTest {
         assertNull(progress.completedExercises["ex1"])
     }
 
+    // ── Fresh day ────────────────────────────────────────────────────────────
+
+    @Test
+    fun openingADayOnALaterDateClearsLastSessionsCheckmarks() = runBlocking {
+        // The reported edge case: after an upgrade, an exercise was already sitting at 3/5.
+        repeat(3) { repository.completeSet("ex1", totalSets = 5, ctx = ctx, now = start) }
+        assertEquals(3, repository.getWorkoutProgress().exerciseCompletedSets["ex1"])
+        repository.endActiveSession(start + 60_000)
+
+        val nextWeek = start + 7 * 24 * 60 * 60 * 1000L
+        val cleared = repository.startFreshDayIfNeeded("day-sun", listOf("ex1", "ex2"), nextWeek)
+
+        assertTrue(cleared)
+        val progress = repository.getWorkoutProgress()
+        assertNull(progress.exerciseCompletedSets["ex1"])
+        assertNull(progress.completedExercises["ex1"])
+    }
+
+    @Test
+    fun openingTheSameDayAgainWithinTheDayKeepsProgress() = runBlocking {
+        repeat(2) { repository.completeSet("ex1", totalSets = 5, ctx = ctx, now = start) }
+
+        // Leaving the app and coming back an hour later on the same date must not wipe the workout.
+        val cleared = repository.startFreshDayIfNeeded("day-sun", listOf("ex1"), start + 3_600_000)
+
+        assertFalse(cleared)
+        assertEquals(2, repository.getWorkoutProgress().exerciseCompletedSets["ex1"])
+    }
+
+    @Test
+    fun aLiveWorkoutIsNeverResetOutFromUnderTheUser() = runBlocking {
+        val late = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 23)
+            set(Calendar.MINUTE, 55)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+        repository.completeSet("ex1", totalSets = 5, ctx = ctx, now = late)
+
+        // Just past midnight, still mid-set: new calendar date, same workout running.
+        val cleared = repository.startFreshDayIfNeeded("day-sun", listOf("ex1"), late + 300_000)
+
+        assertFalse(cleared)
+        assertEquals(1, repository.getWorkoutProgress().exerciseCompletedSets["ex1"])
+    }
+
+    @Test
+    fun freshDayKeepsWorkingWeights() = runBlocking {
+        repository.updateExerciseWeight("ex1", 45f)
+        repository.completeSet("ex1", totalSets = 3, ctx = ctx, now = start)
+
+        repository.startFreshDayIfNeeded("day-sun", listOf("ex1"), start + 86_400_000)
+
+        assertEquals(45f, repository.getWorkoutProgress().exerciseWeights["ex1"]!!, 0.01f)
+    }
+
+    @Test
+    fun freshDayOnlyTouchesItsOwnExercises() = runBlocking {
+        repository.completeSet("ex1", totalSets = 3, ctx = ctx, now = start)
+        val monday = ctx.copy(dayIndex = 1, dayId = "day-mon")
+        repository.completeSet("ex9", totalSets = 3, ctx = monday, now = start + 5_000)
+
+        repository.startFreshDayIfNeeded("day-sun", listOf("ex1"), start + 86_400_000)
+
+        assertNull(repository.getWorkoutProgress().exerciseCompletedSets["ex1"])
+        assertEquals(1, repository.getWorkoutProgress().exerciseCompletedSets["ex9"])
+    }
+
+    // ── Reps ─────────────────────────────────────────────────────────────────
+
+    @Test
+    fun everySetRecordsItsReps() = runBlocking {
+        repository.completeSet("ex1", totalSets = 3, ctx = ctx, reps = 12, now = start)
+        repository.completeSet("ex1", totalSets = 3, ctx = ctx, reps = 10, now = start + 60_000)
+        repository.completeSet("ex1", totalSets = 3, ctx = ctx, reps = 8, now = start + 120_000)
+
+        val entry = repository.getActiveSession()!!.exercises.single()
+        assertEquals(listOf(12, 10, 8), entry.repsPerSet)
+        assertEquals(30, entry.totalReps)
+    }
+
+    @Test
+    fun correctingTheLastSetsRepsOnlyTouchesThatSet() = runBlocking {
+        repository.completeSet("ex1", totalSets = 3, ctx = ctx, reps = 12, now = start)
+        repository.completeSet("ex1", totalSets = 3, ctx = ctx, reps = 12, now = start + 60_000)
+
+        repository.updateLastSetReps("ex1", 7)
+
+        assertEquals(listOf(12, 7), repository.getActiveSession()!!.exercises.single().repsPerSet)
+    }
+
+    @Test
+    fun undoingASetDropsItsRepsToo() = runBlocking {
+        repository.completeSet("ex1", totalSets = 3, ctx = ctx, reps = 12, now = start)
+        repository.completeSet("ex1", totalSets = 3, ctx = ctx, reps = 10, now = start + 60_000)
+
+        repository.undoSet("ex1", totalSets = 3)
+
+        assertEquals(listOf(12), repository.getActiveSession()!!.exercises.single().repsPerSet)
+    }
+
     @Test
     fun pickingADayIsRememberedEvenWhenItIsSunday() = runBlocking {
         // Sunday is index 0, which used to be indistinguishable from "never picked a day".

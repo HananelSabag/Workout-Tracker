@@ -7,7 +7,7 @@ timing, and a full training history.
   <img src="app/src/main/res/drawable/workout_logo.png" width="120" alt="Workout Tracker Logo"/>
 </p>
 
-**Latest build:** [`WorkoutTracker-v2.0.apk`](WorkoutTracker-v2.0.apk) — install directly on any
+**Latest build:** [`WorkoutTracker-v2.1.apk`](WorkoutTracker-v2.1.apk) — install directly on any
 Android 13+ device.
 
 ## ✨ Features
@@ -18,6 +18,10 @@ Android 13+ device.
 - **Flexible Scheduling** - Choose which days you train, skip rest days automatically
 - **One-tap set logging** - A single "set done" button per exercise; the last set closes the
   exercise automatically, with an undo for mis-taps
+- **A clean slate every day** - Opening a workout day on a new date clears last session's
+  checkmarks, so you never find an exercise already sitting at 3/5. Working weights carry over
+- **Rep tracking without typing** - Each set records its reps, pre-filled from the plan and
+  adjustable from the rest timer
 
 ### ⏱️ Session Timing
 - **Automatic workout clock** - Starts on your first logged set, not when the app opens
@@ -27,13 +31,19 @@ Android 13+ device.
 
 ### 📊 Workout History
 - **Every session recorded** - Date, start/end time, duration, sets and volume
-- **Exercise-by-exercise log** - What you actually completed vs. what was planned, and the weight used
+- **Exercise-by-exercise log** - What you actually completed vs. what was planned, the reps for
+  every set (`12 · 12 · 10 · 8`), and the weight used
+- **"Last time" on the card** - The previous session's reps and weight sit on the exercise itself
 - **"Last workout" card** - Straight from the home screen
 
 ### ⏱️ Smart Rest Timer
 - **Background Timer** - Timer continues running even when app is minimized
 - **Notification Support** - Get notified when rest period ends, with a "set done" action
-- **Inline countdown** - Rest shows on the exercise card and in a banner, never blocking you
+- **Opens on its own** - Log a set and the timer comes up: countdown, set number, and a
+  "background" button when you'd rather it got out of the way
+- **Survives being killed** - The countdown stores a real deadline, so an OS kill mid-rest resumes
+  where the clock says it should be instead of freezing
+- **Inline countdown** - Rest also shows on the exercise card and in a banner, never blocking you
 
 ### 🔔 Workout Reminders
 - **Custom Alarms** - Set reminders for specific days and times
@@ -119,8 +129,9 @@ installs straight from GitHub. Swap in a real keystore before any Play Store upl
 ./gradlew testDebugUnitTest connectedDebugAndroidTest
 ```
 
-JVM tests cover the session model and date/duration helpers. The instrumented tests run against a
-real DataStore and guard set counting, session rotation and the idle close.
+JVM tests cover the session model, rep parsing and date/duration helpers. The instrumented tests run
+against a real DataStore and guard set counting, session rotation, the daily reset and the idle
+close.
 
 ## 📋 Requirements
 

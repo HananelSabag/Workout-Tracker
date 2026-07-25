@@ -25,6 +25,12 @@ data class TimerState(
     // can also derive it from (!isRunning && timeLeft == 0) for backwards compatibility.
     val isRestComplete: Boolean = false,
     val isPaused: Boolean = false,
+    /**
+     * Wall-clock instant the countdown is due to end. A CountDownTimer dies with its process, so
+     * without this a rest interrupted by the OS reopens frozen at whatever second it was on and
+     * never finishes. Recovery compares this against the clock instead of trusting [timeLeft].
+     */
+    val endsAtEpochMs: Long = 0L,
     // Session attribution — defaults keep states persisted by older versions decodable.
     val dayIndex: Int = -1,
     val dayId: String = "",

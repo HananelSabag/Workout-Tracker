@@ -349,6 +349,11 @@
     <string name="seconds_short">s</string>
     <string name="working_weight">Working weight</string>
 
+    <string name="reps_in_set">Reps in set %1$d</string>
+    <string name="reps_adjust_hint">Adjust if you did more or fewer</string>
+    <string name="total_reps_value">%1$d reps</string>
+    <string name="fresh_day_reset">New day — progress reset</string>
+
     <!-- Live session -->
     <string name="workout_in_progress">Workout in progress</string>
     <string name="started_at">Started %1$s</string>
@@ -360,6 +365,7 @@
 
     <!-- History -->
     <string name="workout_history">Workout history</string>
+    <string name="last_time">Last time</string>
     <string name="last_workout">Last workout</string>
     <string name="session_summary_line">%1$d min · %2$d sets · %3$d exercises done</string>
     <string name="today">Today</string>

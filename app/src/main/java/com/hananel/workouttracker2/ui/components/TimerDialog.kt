@@ -10,10 +10,13 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.FastForward
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -57,7 +60,9 @@ fun TimerBottomSheet(
     onPauseResume: () -> Unit,
     onStop: () -> Unit,
     onDismiss: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    loggedReps: Int = 0,
+    onRepsChange: (Int) -> Unit = {}
 ) {
     val glass = rememberGlassColors()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -80,10 +85,13 @@ fun TimerBottomSheet(
     ) {
         TimerSheetContent(
             timerState = timerState,
+            loggedReps = loggedReps,
+            onRepsChange = onRepsChange,
             onCompleteSet = onCompleteSet,
             onSkipRest = onSkipRest,
             onPauseResume = onPauseResume,
-            onStop = onStop
+            onStop = onStop,
+            onMinimize = onDismiss
         )
     }
 }
@@ -91,10 +99,13 @@ fun TimerBottomSheet(
 @Composable
 private fun TimerSheetContent(
     timerState: TimerState,
+    loggedReps: Int,
+    onRepsChange: (Int) -> Unit,
     onCompleteSet: () -> Unit,
     onSkipRest: () -> Unit,
     onPauseResume: () -> Unit,
-    onStop: () -> Unit
+    onStop: () -> Unit,
+    onMinimize: () -> Unit
 ) {
     val glass = rememberGlassColors()
     val timeLeft = timerState.timeLeft
@@ -210,7 +221,36 @@ private fun TimerSheetContent(
             totalSets = timerState.totalSets
         )
 
-        Spacer(modifier = Modifier.height(26.dp))
+        // Reps for the set that was just logged. Pre-filled from the plan, so this is here to
+        // correct — never to fill in. Untracked plans ("max") log 0 and hide the row.
+        if (loggedReps > 0 && timerState.completedSets > 0) {
+            Spacer(modifier = Modifier.height(18.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(glass.onGlass.copy(alpha = 0.05f))
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.reps_in_set, timerState.completedSets),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = glass.onGlassMuted
+                    )
+                    Text(
+                        text = stringResource(R.string.reps_adjust_hint),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = glass.onGlassMuted.copy(alpha = 0.7f)
+                    )
+                }
+                RepsAdjuster(reps = loggedReps, onChange = onRepsChange, accent = accent)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(22.dp))
 
         // ── Actions ─────────────────────────────────────────────────────────
         if (isRestComplete) {
@@ -234,13 +274,27 @@ private fun TimerSheetContent(
                 fontSize = 16
             )
             Spacer(modifier = Modifier.height(10.dp))
-            GhostButton(
-                text = if (isPaused) stringResource(R.string.resume) else stringResource(R.string.pause),
-                icon = if (isPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
-                onClick = onPauseResume,
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                height = 48.dp
-            )
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                GhostButton(
+                    text = if (isPaused) stringResource(R.string.resume) else stringResource(R.string.pause),
+                    icon = if (isPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
+                    onClick = onPauseResume,
+                    modifier = Modifier.weight(1f),
+                    height = 48.dp
+                )
+                // The countdown keeps running in the foreground service and its notification —
+                // this is just "get out of my way".
+                GhostButton(
+                    text = stringResource(R.string.minimize),
+                    icon = Icons.Default.KeyboardArrowDown,
+                    onClick = onMinimize,
+                    modifier = Modifier.weight(1f),
+                    height = 48.dp
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(6.dp))
@@ -258,6 +312,50 @@ private fun TimerSheetContent(
                 color = MaterialTheme.colorScheme.error.copy(alpha = 0.75f),
                 fontWeight = FontWeight.SemiBold
             )
+        }
+    }
+}
+
+/** Compact −/value/+ for correcting the reps just logged, without leaving the timer. */
+@Composable
+private fun RepsAdjuster(reps: Int, onChange: (Int) -> Unit, accent: Color) {
+    val glass = rememberGlassColors()
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        RepsStep(icon = Icons.Default.Remove, accent = accent, enabled = reps > 1) {
+            onChange(reps - 1)
+        }
+        Text(
+            text = "$reps",
+            style = MaterialTheme.typography.headlineSmall,
+            color = glass.onGlass,
+            modifier = Modifier.widthIn(min = 40.dp),
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
+        RepsStep(icon = Icons.Default.Add, accent = accent, enabled = reps < 999) {
+            onChange(reps + 1)
+        }
+    }
+}
+
+@Composable
+private fun RepsStep(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    accent: Color,
+    enabled: Boolean,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = Modifier.size(36.dp),
+        shape = CircleShape,
+        color = chipTint(accent)
+    ) {
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+            Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(18.dp))
         }
     }
 }

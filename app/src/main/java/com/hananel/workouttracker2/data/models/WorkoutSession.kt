@@ -63,5 +63,13 @@ data class SessionExerciseLog(
     val weight: Float = 0f,
     val completed: Boolean = false,
     val firstSetTime: Long = 0L,
-    val lastSetTime: Long = 0L
-)
+    val lastSetTime: Long = 0L,
+    /**
+     * Reps actually performed, one entry per completed set. Pre-filled from the plan when a set is
+     * logged and adjustable from the rest timer, so "what did I actually do last time" is answerable
+     * without the user having to type anything during a workout.
+     */
+    val repsPerSet: List<Int> = emptyList()
+) {
+    val totalReps: Int get() = repsPerSet.sum()
+}

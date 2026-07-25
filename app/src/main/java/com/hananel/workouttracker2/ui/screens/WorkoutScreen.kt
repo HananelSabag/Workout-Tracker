@@ -92,6 +92,9 @@ fun WorkoutScreen(
         repository.getUserPreferencesFlow().collect { prefs -> enabledDays = prefs.enabledDays }
     }
 
+    // If the OS killed the app mid-rest, pick the countdown back up where the clock says it should be.
+    LaunchedEffect(Unit) { viewModel.recoverTimerIfInterrupted(context) }
+
     val currentWorkout = remember(selectedDayIndex, workoutDays) {
         workoutDays.find { it.dayIndex == selectedDayIndex }
     }
@@ -106,16 +109,30 @@ fun WorkoutScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    // Auto-open the sheet when a new countdown starts, or when the user returns to the app and the
-    // rest has already finished — otherwise they'd see only a strip with no obvious next action.
-    LaunchedEffect(timerState?.exerciseId, timerState?.currentSet, timerState?.isRestComplete) {
+    // Log a set and the timer comes up on its own — you see the countdown, and can send it to the
+    // background with one tap. Keyed on the set number so each new rest re-opens it even if the
+    // previous one was dismissed; the flag only suppresses re-opening within the same rest.
+    LaunchedEffect(timerState?.exerciseId, timerState?.completedSets) {
+        if (timerState != null) {
+            userClosedSheet = false
+            showTimerSheet = true
+        }
+    }
+
+    LaunchedEffect(timerState?.isRestComplete) {
         val state = timerState
         when {
             state == null -> {
                 showTimerSheet = false
                 userClosedSheet = false
             }
-            state.isRestComplete && !userClosedSheet -> showTimerSheet = true
+            // Rest finishing is its own event, so this ignores an earlier "background" tap: the
+            // countdown ending is exactly when you want the next set one tap away. Keyed on the
+            // flag, so dismissing this sheet doesn't bounce it straight back.
+            state.isRestComplete -> {
+                userClosedSheet = false
+                showTimerSheet = true
+            }
         }
     }
 
@@ -319,6 +336,9 @@ fun WorkoutScreen(
                                     restTotalTime = if (isThisExercise) timer!!.totalTime else 0,
                                     isRestRunningForThis = restRunning,
                                     isRestCompleteForThis = restComplete,
+                                    previousLog = remember(sessionHistory, exercise.id) {
+                                        viewModel.previousLogFor(exercise.id)
+                                    },
                                     onCompleteSet = { viewModel.completeSet(exercise, context) },
                                     onUndoSet = { viewModel.undoSet(exercise, context) },
                                     onSkipRest = { viewModel.skipRest(context) },
@@ -356,13 +376,17 @@ fun WorkoutScreen(
 
     // ── Sheets ──────────────────────────────────────────────────────────────
     if (showTimerSheet && timerState != null) {
+        val state = timerState!!
         TimerBottomSheet(
-            timerState = timerState!!,
-            onCompleteSet = {
-                viewModel.completeSetFromTimer(context)
-                userClosedSheet = true
-                showTimerSheet = false
-            },
+            timerState = state,
+            // Reps come from the session log, so the stepper shows what was actually recorded.
+            loggedReps = activeSession?.exercises
+                ?.firstOrNull { it.exerciseId == state.exerciseId }
+                ?.repsPerSet?.lastOrNull() ?: 0,
+            onRepsChange = { viewModel.setLastSetReps(state.exerciseId, it) },
+            // Deliberately does not close the sheet: logging the next set starts the next rest and
+            // the countdown simply continues in place.
+            onCompleteSet = { viewModel.completeSetFromTimer(context) },
             onSkipRest = {
                 viewModel.skipRest(context)
                 userClosedSheet = true

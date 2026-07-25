@@ -14,6 +14,7 @@ import com.hananel.workouttracker2.data.repository.SessionContext
 import com.hananel.workouttracker2.data.repository.WorkoutRepository
 import com.hananel.workouttracker2.receiver.TimerActionReceiver
 import com.hananel.workouttracker2.utils.NotificationHelper
+import com.hananel.workouttracker2.utils.RepsUtils
 import kotlinx.coroutines.*
 
 /**
@@ -42,12 +43,21 @@ class TimerService : Service() {
         const val ACTION_SKIP_REST = "com.hananel.workouttracker2.SKIP_REST"
         const val ACTION_PAUSE_RESUME = "com.hananel.workouttracker2.PAUSE_RESUME"
 
+        /**
+         * Whether a countdown is live in this process. Used by the app to tell "the service is
+         * still ticking" apart from "the persisted state outlived its process".
+         */
+        @Volatile
+        var isRunning: Boolean = false
+            private set
+
         const val NOTIFICATION_ID = 1003
         const val CHANNEL_ID = "timer_service"
 
         const val EXTRA_EXERCISE_NAME = "exercise_name"
         const val EXTRA_EXERCISE_ID = "exercise_id"
         const val EXTRA_REST_TIME = "rest_time"
+        const val EXTRA_TOTAL_TIME = "total_time"
         const val EXTRA_CURRENT_SET = "current_set"
         const val EXTRA_TOTAL_SETS = "total_sets"
         const val EXTRA_COMPLETED_SETS = "completed_sets"
@@ -72,13 +82,16 @@ class TimerService : Service() {
             dayId: String = "",
             dayName: String = "",
             plannedExercises: Int = 0,
-            reps: String = ""
+            reps: String = "",
+            /** Full rest length, when [restTime] is only the remainder being resumed. */
+            totalTime: Int = restTime
         ) {
             val intent = Intent(context, TimerService::class.java).apply {
                 action = ACTION_START_TIMER
                 putExtra(EXTRA_EXERCISE_NAME, exerciseName)
                 putExtra(EXTRA_EXERCISE_ID, exerciseId)
                 putExtra(EXTRA_REST_TIME, restTime)
+                putExtra(EXTRA_TOTAL_TIME, totalTime)
                 putExtra(EXTRA_CURRENT_SET, completedSets)
                 putExtra(EXTRA_TOTAL_SETS, totalSets)
                 putExtra(EXTRA_COMPLETED_SETS, completedSets)
@@ -151,6 +164,7 @@ class TimerService : Service() {
                     exerciseName = intent.getStringExtra(EXTRA_EXERCISE_NAME) ?: "",
                     exerciseId = intent.getStringExtra(EXTRA_EXERCISE_ID) ?: "",
                     restTime = restTime,
+                    totalTime = intent.getIntExtra(EXTRA_TOTAL_TIME, restTime).coerceAtLeast(restTime),
                     completedSets = completedSets,
                     totalSets = totalSets,
                     dayIndex = intent.getIntExtra(EXTRA_DAY_INDEX, -1),
@@ -173,7 +187,7 @@ class TimerService : Service() {
             }
         }
 
-        return START_STICKY
+        return START_NOT_STICKY
     }
 
     /**
@@ -194,6 +208,7 @@ class TimerService : Service() {
         exerciseName: String,
         exerciseId: String,
         restTime: Int,
+        totalTime: Int = restTime,
         completedSets: Int,
         totalSets: Int,
         dayIndex: Int,
@@ -204,11 +219,12 @@ class TimerService : Service() {
     ) {
         isServiceStopping = false
         isPaused = false
+        isRunning = true
         countDownTimer?.cancel()
 
         currentTimerState = TimerState(
             timeLeft = restTime,
-            totalTime = restTime,
+            totalTime = totalTime,
             isRunning = true,
             exerciseName = exerciseName,
             exerciseId = exerciseId,
@@ -217,6 +233,7 @@ class TimerService : Service() {
             completedSets = completedSets,
             isRestComplete = false,
             isPaused = false,
+            endsAtEpochMs = System.currentTimeMillis() + restTime * 1000L,
             dayIndex = dayIndex,
             dayId = dayId,
             dayName = dayName,
@@ -255,7 +272,11 @@ class TimerService : Service() {
         if (state.isRestComplete) return
         if (isPaused) {
             isPaused = false
-            currentTimerState = state.copy(isPaused = false, isRunning = true)
+            currentTimerState = state.copy(
+                isPaused = false,
+                isRunning = true,
+                endsAtEpochMs = System.currentTimeMillis() + pausedTimeLeft * 1000L
+            )
             runBlocking { repository?.saveTimerState(currentTimerState) }
             startForeground(NOTIFICATION_ID, createTimerNotification(pausedTimeLeft))
             tick(pausedTimeLeft)
@@ -311,7 +332,8 @@ class TimerService : Service() {
                     plannedExercises = state.plannedExercises,
                     exerciseName = state.exerciseName,
                     reps = state.reps
-                )
+                ),
+                reps = RepsUtils.targetReps(state.reps)
             )
         }
 
@@ -336,6 +358,7 @@ class TimerService : Service() {
 
     private fun stopTimerAndCleanup() {
         isServiceStopping = true
+        isRunning = false
         countDownTimer?.cancel()
         countDownTimer = null
         currentTimerState = null
@@ -454,6 +477,7 @@ class TimerService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         isServiceStopping = true
+        isRunning = false
         countDownTimer?.cancel()
         countDownTimer = null
         currentTimerState = null

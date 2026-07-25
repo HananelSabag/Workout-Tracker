@@ -349,6 +349,11 @@
     <string name="seconds_short">שנ׳</string>
     <string name="working_weight">משקל עבודה</string>
 
+    <string name="reps_in_set">חזרות בסט %1$d</string>
+    <string name="reps_adjust_hint">עדכן אם עשית יותר או פחות</string>
+    <string name="total_reps_value">%1$d חזרות</string>
+    <string name="fresh_day_reset">יום חדש — ההתקדמות אופסה</string>
+
     <!-- Live session -->
     <string name="workout_in_progress">אימון פעיל</string>
     <string name="started_at">התחלה %1$s</string>
@@ -360,6 +365,7 @@
 
     <!-- History -->
     <string name="workout_history">היסטוריית אימונים</string>
+    <string name="last_time">בפעם שעברה</string>
     <string name="last_workout">האימון האחרון</string>
     <string name="session_summary_line">%1$d דק׳ · %2$d סטים · %3$d תרגילים הושלמו</string>
     <string name="today">היום</string>
