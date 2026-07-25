@@ -16,8 +16,11 @@ import com.hananel.workouttracker2.service.TimerService
 import com.hananel.workouttracker2.utils.DateUtils
 import com.hananel.workouttracker2.utils.RepsUtils
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -196,8 +199,14 @@ class WorkoutViewModel(
      */
     private suspend fun startFreshDayIfNeeded(dayIndex: Int) {
         val day = _workoutDays.value.find { it.dayIndex == dayIndex } ?: return
-        repository.startFreshDayIfNeeded(day.id, day.exercises.map { it.id })
+        val cleared = repository.startFreshDayIfNeeded(day.id, day.exercises.map { it.id })
+        // Only announce it when marks actually disappeared — otherwise the user sees an
+        // unexplained change and assumes data was lost.
+        if (cleared) _dayResetNotice.emit(Unit)
     }
+
+    private val _dayResetNotice = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val dayResetNotice: SharedFlow<Unit> = _dayResetNotice.asSharedFlow()
 
     fun getCurrentDayWorkout(): WorkoutDay? =
         _workoutDays.value.find { it.dayIndex == _selectedDayIndex.value }

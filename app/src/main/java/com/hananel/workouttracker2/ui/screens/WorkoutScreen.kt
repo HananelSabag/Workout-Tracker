@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.History
@@ -57,6 +58,7 @@ import com.hananel.workouttracker2.ui.theme.AppBackground
 import com.hananel.workouttracker2.ui.theme.Electric
 import com.hananel.workouttracker2.ui.theme.GlassCard
 import com.hananel.workouttracker2.ui.theme.Mint
+import com.hananel.workouttracker2.ui.theme.SuccessGradient
 import com.hananel.workouttracker2.ui.theme.chipTint
 import com.hananel.workouttracker2.ui.theme.rememberGlassColors
 import com.hananel.workouttracker2.utils.DateUtils
@@ -103,11 +105,19 @@ fun WorkoutScreen(
     var showCreateExerciseDialog by remember { mutableStateOf(false) }
     var showTimerSheet by remember { mutableStateOf(false) }
     var showRenameSheet by remember { mutableStateOf(false) }
+    var showEndSessionSheet by remember { mutableStateOf(false) }
     // Tracks a deliberate dismissal so state changes don't yank the sheet back open.
     var userClosedSheet by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+
+    // Say why the checkmarks went away, so a cleared day never reads as lost data.
+    LaunchedEffect(Unit) {
+        viewModel.dayResetNotice.collect {
+            snackbarHostState.showSnackbar(context.getString(R.string.fresh_day_reset))
+        }
+    }
 
     // Log a set and the timer comes up on its own — you see the countdown, and can send it to the
     // background with one tap. Keyed on the set number so each new rest re-opens it even if the
@@ -288,14 +298,7 @@ fun WorkoutScreen(
                                     ActiveSessionBar(
                                         session = session,
                                         now = now,
-                                        onEndSession = {
-                                            viewModel.endSession(context)
-                                            scope.launch {
-                                                snackbarHostState.showSnackbar(
-                                                    context.getString(R.string.workout_saved)
-                                                )
-                                            }
-                                        }
+                                        onEndSession = { showEndSessionSheet = true }
                                     )
                                 } else {
                                     sessionHistory.firstOrNull()?.let { last ->
@@ -405,6 +408,33 @@ fun WorkoutScreen(
         )
     }
 
+    // Ending a workout is the one moment worth confirming: it's the point the session becomes a
+    // history entry, and the previous silent close left no sign it had been saved at all.
+    if (showEndSessionSheet) {
+        val session = activeSession
+        if (session == null) {
+            showEndSessionSheet = false
+        } else {
+            EndSessionSheet(
+                session = session,
+                now = now,
+                onDismiss = { showEndSessionSheet = false },
+                onConfirm = {
+                    viewModel.endSession(context)
+                    showEndSessionSheet = false
+                    scope.launch {
+                        val result = snackbarHostState.showSnackbar(
+                            message = context.getString(R.string.workout_saved),
+                            actionLabel = context.getString(R.string.view_history),
+                            duration = SnackbarDuration.Long
+                        )
+                        if (result == SnackbarResult.ActionPerformed) onNavigateToHistory()
+                    }
+                }
+            )
+        }
+    }
+
     if (showRenameSheet && currentWorkout != null) {
         RenameDaySheet(
             initialName = currentWorkout.customName,
@@ -511,14 +541,22 @@ private fun RestBanner(
                     horizontalArrangement = Arrangement.spacedBy(9.dp),
                     modifier = Modifier.weight(1f)
                 ) {
-                    Box(
+                    // An explicit "rest" badge, because this bar sits right above the workout
+                    // clock and two bare countdowns next to each other read as noise.
+                    Row(
                         modifier = Modifier
-                            .size(28.dp)
-                            .clip(CircleShape)
-                            .background(chipTint(accent)),
-                        contentAlignment = Alignment.Center
+                            .clip(RoundedCornerShape(9.dp))
+                            .background(chipTint(accent))
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)
                     ) {
-                        Icon(Icons.Default.Timer, null, tint = accent, modifier = Modifier.size(15.dp))
+                        Icon(Icons.Default.Timer, null, tint = accent, modifier = Modifier.size(13.dp))
+                        Text(
+                            text = stringResource(R.string.rest_label),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = accent
+                        )
                     }
                     Column {
                         Text(
@@ -723,6 +761,100 @@ private fun NoDaysBanner(onClick: () -> Unit) {
                 modifier = Modifier.weight(1f)
             )
         }
+    }
+}
+
+// ─── End-of-workout confirmation ─────────────────────────────────────────────
+
+@Composable
+private fun EndSessionSheet(
+    session: com.hananel.workouttracker2.data.models.WorkoutSession,
+    now: Long,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    val glass = rememberGlassColors()
+    val elapsed = (now - session.startTime).coerceAtLeast(0L)
+
+    GlassSheet(
+        title = stringResource(R.string.end_workout_title),
+        subtitle = session.dayName.ifBlank { null },
+        icon = Icons.Default.CheckCircle,
+        accent = Mint,
+        onDismiss = onDismiss
+    ) {
+        // A receipt of what's about to be stored, so "did it save?" never comes up.
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            SummaryTile(
+                value = DateUtils.formatDuration(elapsed),
+                label = stringResource(R.string.workout_duration),
+                tint = Electric,
+                modifier = Modifier.weight(1f)
+            )
+            SummaryTile(
+                value = "${session.totalSets}",
+                label = stringResource(R.string.sets),
+                tint = Mint,
+                modifier = Modifier.weight(1f)
+            )
+            SummaryTile(
+                value = "${session.completedExerciseCount}/${
+                    session.plannedExercises.coerceAtLeast(session.exercises.size)
+                }",
+                label = stringResource(R.string.exercises_completed),
+                tint = Amber,
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        Text(
+            text = stringResource(R.string.end_workout_message),
+            style = MaterialTheme.typography.bodySmall,
+            color = glass.onGlassMuted
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            GhostButton(
+                text = stringResource(R.string.cancel),
+                onClick = onDismiss,
+                modifier = Modifier.weight(1f)
+            )
+            GradientButton(
+                text = stringResource(R.string.end_workout_confirm),
+                icon = Icons.Default.CheckCircle,
+                gradient = SuccessGradient,
+                onClick = onConfirm,
+                modifier = Modifier.weight(1.4f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun SummaryTile(value: String, label: String, tint: Color, modifier: Modifier = Modifier) {
+    val glass = rememberGlassColors()
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(glass.onGlass.copy(alpha = 0.05f))
+            .padding(vertical = 12.dp, horizontal = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(3.dp)
+    ) {
+        Text(text = value, style = MaterialTheme.typography.titleLarge, color = tint)
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = glass.onGlassMuted,
+            textAlign = TextAlign.Center,
+            maxLines = 2
+        )
     }
 }
 

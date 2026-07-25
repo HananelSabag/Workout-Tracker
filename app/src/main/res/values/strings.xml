@@ -342,7 +342,7 @@
     <string name="undo_set">בטל סט אחרון</string>
     <string name="unmark_complete">בטל השלמה</string>
     <string name="skip_rest">דלג על המנוחה</string>
-    <string name="resting_now">במנוחה…</string>
+    <string name="resting_now">מנוחה בין סטים</string>
     <string name="time_for_set">זמן לסט %1$d מתוך %2$d</string>
     <string name="rest_before_set">מנוחה לפני סט %1$d/%2$d</string>
     <string name="set_done">סיימתי סט</string>
@@ -351,15 +351,14 @@
 
     <string name="reps_in_set">חזרות בסט %1$d</string>
     <string name="reps_adjust_hint">עדכן אם עשית יותר או פחות</string>
-    <string name="total_reps_value">%1$d חזרות</string>
-    <string name="fresh_day_reset">יום חדש — ההתקדמות אופסה</string>
+    <string name="fresh_day_reset">יום אימון חדש — הסימונים אופסו</string>
 
     <!-- Live session -->
-    <string name="workout_in_progress">אימון פעיל</string>
+    <string name="workout_in_progress">האימון מתקיים</string>
     <string name="started_at">התחלה %1$s</string>
-    <string name="end_workout">סיים אימון</string>
-    <string name="workout_saved">האימון נשמר בהיסטוריה ✓</string>
-    <string name="session_auto_close_hint">ללא פעילות — האימון ייסגר אוטומטית בעוד %1$d דק׳</string>
+    <string name="end_workout">סיים ושמור אימון</string>
+    <string name="workout_saved">האימון נשמר בהיסטוריה</string>
+    <string name="session_auto_close_hint">אין פעילות — האימון ייסגר לבד בעוד %1$d דק׳</string>
     <string name="total_volume">נפח</string>
     <string name="total_volume_value">נפח כולל: %1$s ק"ג</string>
 
@@ -383,4 +382,10 @@
     <string name="sets_value">%1$d סטים</string>
     <string name="delete_session">מחיקת אימון</string>
     <string name="delete_session_message">האימון יימחק מההיסטוריה. הפעולה בלתי הפיכה.</string>
+    <string name="workout_duration">משך האימון</string>
+    <string name="rest_label">מנוחה</string>
+    <string name="end_workout_title">לסיים את האימון?</string>
+    <string name="end_workout_message">האימון יישמר בהיסטוריה ותוכל לראות אותו בכל זמן.</string>
+    <string name="end_workout_confirm">שמור וסיים</string>
+    <string name="view_history">להיסטוריה</string>
 </resources>

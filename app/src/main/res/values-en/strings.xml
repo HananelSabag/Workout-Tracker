@@ -342,7 +342,7 @@
     <string name="undo_set">Undo last set</string>
     <string name="unmark_complete">Unmark complete</string>
     <string name="skip_rest">Skip rest</string>
-    <string name="resting_now">Resting…</string>
+    <string name="resting_now">Rest between sets</string>
     <string name="time_for_set">Time for set %1$d of %2$d</string>
     <string name="rest_before_set">Rest before set %1$d/%2$d</string>
     <string name="set_done">Set done</string>
@@ -351,15 +351,14 @@
 
     <string name="reps_in_set">Reps in set %1$d</string>
     <string name="reps_adjust_hint">Adjust if you did more or fewer</string>
-    <string name="total_reps_value">%1$d reps</string>
-    <string name="fresh_day_reset">New day — progress reset</string>
+    <string name="fresh_day_reset">New training day — checkmarks cleared</string>
 
     <!-- Live session -->
-    <string name="workout_in_progress">Workout in progress</string>
+    <string name="workout_in_progress">Workout running</string>
     <string name="started_at">Started %1$s</string>
-    <string name="end_workout">End workout</string>
-    <string name="workout_saved">Workout saved to history ✓</string>
-    <string name="session_auto_close_hint">No activity — this workout closes automatically in %1$d min</string>
+    <string name="end_workout">Finish &amp; save workout</string>
+    <string name="workout_saved">Workout saved to history</string>
+    <string name="session_auto_close_hint">No activity — this workout closes itself in %1$d min</string>
     <string name="total_volume">Volume</string>
     <string name="total_volume_value">Total volume: %1$s kg</string>
 
@@ -383,4 +382,10 @@
     <string name="sets_value">%1$d sets</string>
     <string name="delete_session">Delete workout</string>
     <string name="delete_session_message">This workout will be removed from history. This cannot be undone.</string>
+    <string name="workout_duration">Workout time</string>
+    <string name="rest_label">Rest</string>
+    <string name="end_workout_title">Finish this workout?</string>
+    <string name="end_workout_message">It will be saved to your history, where you can review it any time.</string>
+    <string name="end_workout_confirm">Save &amp; finish</string>
+    <string name="view_history">History</string>
 </resources>

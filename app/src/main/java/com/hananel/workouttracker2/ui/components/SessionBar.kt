@@ -111,12 +111,21 @@ fun ActiveSessionBar(
                         )
                     }
                 }
-                Text(
-                    text = DateUtils.formatDuration(elapsed),
-                    fontSize = 30.sp,
-                    style = MaterialTheme.typography.displaySmall,
-                    color = glass.onGlass
-                )
+                // Labelled on purpose: there are two clocks on this screen and the big number
+                // has to say which one it is without the user having to work it out.
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = DateUtils.formatDuration(elapsed),
+                        fontSize = 30.sp,
+                        style = MaterialTheme.typography.displaySmall,
+                        color = glass.onGlass
+                    )
+                    Text(
+                        text = stringResource(R.string.workout_duration),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = glass.onGlassMuted
+                    )
+                }
             }
 
             Row(

@@ -7,7 +7,7 @@ timing, and a full training history.
   <img src="app/src/main/res/drawable/workout_logo.png" width="120" alt="Workout Tracker Logo"/>
 </p>
 
-**Latest build:** [`WorkoutTracker-v2.1.apk`](WorkoutTracker-v2.1.apk) — install directly on any
+**Latest build:** [`WorkoutTracker-v2.2.apk`](WorkoutTracker-v2.2.apk) — install directly on any
 Android 13+ device.
 
 ## ✨ Features
@@ -24,7 +24,10 @@ Android 13+ device.
   adjustable from the rest timer
 
 ### ⏱️ Session Timing
-- **Automatic workout clock** - Starts on your first logged set, not when the app opens
+- **Automatic workout clock** - Starts on your first logged set, not when the app opens. Labelled
+  "workout time" and kept visually distinct from the rest countdown, which always carries a "rest"
+  badge — two clocks on one screen have to say which is which
+- **Explicit finish** - Ending a workout shows what's about to be stored and confirms once saved
 - **10-minute idle close** - Walk away and the session ends by itself, backdated to your last
   action, so the recorded length is real training time
 - **Live stats** - Sets, exercises finished and total volume while you train
@@ -129,7 +132,9 @@ installs straight from GitHub. Swap in a real keystore before any Play Store upl
 ./gradlew testDebugUnitTest connectedDebugAndroidTest
 ```
 
-JVM tests cover the session model, rep parsing and date/duration helpers. The instrumented tests run
+JVM tests cover the session model, rep parsing, date/duration helpers, and persistence
+compatibility — old DataStore payloads must keep decoding, since users update rather than reinstall
+and a failed decode silently empties their workout plan. The instrumented tests run
 against a real DataStore and guard set counting, session rotation, the daily reset and the idle
 close.
 
