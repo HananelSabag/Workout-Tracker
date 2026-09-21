@@ -1,5 +1,7 @@
 package com.hananel.workouttracker2.ui.screens
 
+import com.hananel.workouttracker2.ui.rememberStorageScope
+
 import android.app.TimePickerDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -42,7 +44,7 @@ fun AlarmsScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
+    val scope = rememberStorageScope()
     val repository = remember { WorkoutRepository(context) }
     val notificationHelper = remember { NotificationHelper(context) }
     
@@ -159,14 +161,11 @@ fun AlarmsScreen(
                         alarm = alarm,
                         onToggle = { enabled ->
                             scope.launch {
-                                val prefs = repository.getUserPreferencesFlow().first()
-                                val updatedAlarms = prefs.workoutAlarms.map {
-                                    if (it.id == alarm.id) it.copy(isEnabled = enabled) else it
+                                repository.updateUserPreferences { prefs ->
+                                    prefs.copy(workoutAlarms = prefs.workoutAlarms.map { if (it.id == alarm.id) it.copy(isEnabled = enabled) else it })
                                 }
-                                repository.updateUserPreferences(prefs.copy(workoutAlarms = updatedAlarms))
-                                
                                 if (enabled) {
-                                    notificationHelper.scheduleWorkoutReminder(alarm)
+                                    notificationHelper.scheduleWorkoutReminder(alarm.copy(isEnabled = true))
                                 } else {
                                     notificationHelper.cancelWorkoutReminder(alarm.id)
                                 }
@@ -189,18 +188,11 @@ fun AlarmsScreen(
                 },
                 onSave = { alarm ->
                     scope.launch {
-                        val prefs = repository.getUserPreferencesFlow().first()
-                        val updatedAlarms = if (alarmToEdit != null) {
-                            prefs.workoutAlarms.map { if (it.id == alarm.id) alarm else it }
-                        } else {
-                            prefs.workoutAlarms + alarm
+                        repository.updateUserPreferences { prefs ->
+                            prefs.copy(workoutAlarms = prefs.workoutAlarms.filterNot { it.id == alarm.id } + alarm)
                         }
-                        repository.updateUserPreferences(prefs.copy(workoutAlarms = updatedAlarms))
-                        
-                        if (alarm.isEnabled) {
-                            notificationHelper.scheduleWorkoutReminder(alarm)
-                        }
-                        
+                        notificationHelper.scheduleWorkoutReminder(alarm)
+
                         showAddDialog = false
                         alarmToEdit = null
                     }
@@ -230,9 +222,9 @@ fun AlarmsScreen(
                     Button(
                         onClick = {
                             scope.launch {
-                                val prefs = repository.getUserPreferencesFlow().first()
-                                val updatedAlarms = prefs.workoutAlarms.filter { it.id != alarm.id }
-                                repository.updateUserPreferences(prefs.copy(workoutAlarms = updatedAlarms))
+                                repository.updateUserPreferences { prefs ->
+                                    prefs.copy(workoutAlarms = prefs.workoutAlarms.filterNot { it.id == alarm.id })
+                                }
                                 notificationHelper.cancelWorkoutReminder(alarm.id)
                                 alarmToDelete = null
                             }
@@ -470,13 +462,11 @@ fun AlarmDialog(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(18.dp))
                     .clickable {
-                        val timeParts = selectedTime.split(":")
-                        val hour = timeParts[0].toInt()
-                        val minute = timeParts[1].toInt()
+                        val (hour, minute) = com.hananel.workouttracker2.utils.parseReminderTime(selectedTime) ?: (18 to 0)
                         TimePickerDialog(
                             context,
                             { _, selectedHour, selectedMinute ->
-                                selectedTime = String.format("%02d:%02d", selectedHour, selectedMinute)
+                                selectedTime = String.format(java.util.Locale.ROOT, "%02d:%02d", selectedHour, selectedMinute)
                             },
                             hour,
                             minute,

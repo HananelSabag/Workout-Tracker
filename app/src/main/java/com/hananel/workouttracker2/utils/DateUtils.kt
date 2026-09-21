@@ -5,7 +5,8 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 
 object DateUtils {
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+    // SimpleDateFormat is mutable: repository workers and the UI must not share an instance.
+    private val dateFormat get() = SimpleDateFormat("yyyy-MM-dd", Locale.US)
     
     fun getCurrentWeekStart(): String {
         val calendar = Calendar.getInstance()

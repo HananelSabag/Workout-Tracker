@@ -388,4 +388,7 @@
     <string name="end_workout_message">It will be saved to your history, where you can review it any time.</string>
     <string name="end_workout_confirm">Save &amp; finish</string>
     <string name="view_history">History</string>
+    <string name="data_load_error">Could not read or save your workout. Existing data has been retained. Please try again.</string>
+    <string name="retry_loading">Try again</string>
+    <string name="unnamed_exercise">Unnamed exercise</string>
 </resources>

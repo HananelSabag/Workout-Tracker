@@ -8,7 +8,9 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.hananel.workouttracker2.data.models.*
+import com.hananel.workouttracker2.data.DisplayNames
 import com.hananel.workouttracker2.utils.DateUtils
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -18,7 +20,8 @@ import java.util.UUID
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "workout_tracker")
 
-class WorkoutRepository(private val context: Context) {
+class WorkoutRepository(context: Context, private val store: DataStore<Preferences> = context.applicationContext.dataStore) {
+    private val context = context.applicationContext
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -37,12 +40,12 @@ class WorkoutRepository(private val context: Context) {
     // ── Workout Progress ─────────────────────────────────────────────────────
 
     suspend fun saveWorkoutProgress(progress: WorkoutProgress) {
-        context.dataStore.edit { preferences ->
+        store.edit { preferences ->
             preferences[WORKOUT_PROGRESS_KEY] = json.encodeToString(progress)
         }
     }
 
-    fun getWorkoutProgressFlow(): Flow<WorkoutProgress> = context.dataStore.data.map { preferences ->
+    fun getWorkoutProgressFlow(): Flow<WorkoutProgress> = store.data.map { preferences ->
         preferences.readProgress()
     }
 
@@ -52,8 +55,8 @@ class WorkoutRepository(private val context: Context) {
         this[WORKOUT_PROGRESS_KEY]?.let { jsonString ->
             try {
                 json.decodeFromString<WorkoutProgress>(jsonString)
-            } catch (e: Exception) {
-                createDefaultProgress()
+            } catch (e: kotlinx.serialization.SerializationException) {
+                throw WorkoutDataException(e)
             }
         } ?: createDefaultProgress()
 
@@ -65,49 +68,61 @@ class WorkoutRepository(private val context: Context) {
     // ── User Preferences ─────────────────────────────────────────────────────
 
     suspend fun saveUserPreferences(preferences: UserPreferences) {
-        context.dataStore.edit { prefs ->
+        store.edit { prefs ->
             prefs[USER_PREFERENCES_KEY] = json.encodeToString(preferences)
         }
     }
 
     suspend fun updateUserPreferences(preferences: UserPreferences) = saveUserPreferences(preferences)
 
-    fun getUserPreferencesFlow(): Flow<UserPreferences> = context.dataStore.data.map { preferences ->
+    fun getUserPreferencesFlow(): Flow<UserPreferences> = store.data.map { preferences ->
         preferences[USER_PREFERENCES_KEY]?.let { jsonString ->
             try {
                 json.decodeFromString<UserPreferences>(jsonString)
-            } catch (e: Exception) {
-                UserPreferences()
+            } catch (e: kotlinx.serialization.SerializationException) {
+                throw WorkoutDataException(e)
             }
         } ?: UserPreferences()
     }
 
     suspend fun getUserPreferences(): UserPreferences = getUserPreferencesFlow().first()
 
-    suspend fun updateAutoOpenCurrentDay(enabled: Boolean) {
-        saveUserPreferences(getUserPreferences().copy(autoOpenCurrentDay = enabled))
+    suspend fun updateUserPreferences(transform: (UserPreferences) -> UserPreferences) {
+        store.edit { prefs ->
+            val latest = prefs[USER_PREFERENCES_KEY]?.let { json.decodeFromString<UserPreferences>(it) } ?: UserPreferences()
+            prefs[USER_PREFERENCES_KEY] = json.encodeToString(transform(latest))
+        }
     }
 
-    suspend fun updateLastViewedDay(dayIndex: Int) {
-        saveUserPreferences(
-            getUserPreferences().copy(lastViewedDayIndex = dayIndex, hasViewedAnyDay = true)
-        )
-    }
+    suspend fun updateAutoOpenCurrentDay(enabled: Boolean) =
+        updateUserPreferences { it.copy(autoOpenCurrentDay = enabled) }
+
+    suspend fun updateLastViewedDay(dayIndex: Int) =
+        updateUserPreferences { it.copy(lastViewedDayIndex = dayIndex.coerceIn(0, 6), hasViewedAnyDay = true) }
 
     // ── Workout Structure ────────────────────────────────────────────────────
 
     suspend fun saveWorkoutStructure(workoutDays: List<WorkoutDay>) {
-        context.dataStore.edit { preferences ->
-            preferences[WORKOUT_STRUCTURE_KEY] = json.encodeToString(workoutDays)
+        store.edit { preferences ->
+            preferences[WORKOUT_STRUCTURE_KEY] = json.encodeToString(DisplayNames.prepare(workoutDays, context.resources, legacy = false))
         }
     }
 
-    fun getWorkoutStructureFlow(): Flow<List<WorkoutDay>> = context.dataStore.data.map { preferences ->
+    suspend fun updateWorkoutStructure(transform: (List<WorkoutDay>) -> List<WorkoutDay>) {
+        store.edit { prefs ->
+            val latest = prefs[WORKOUT_STRUCTURE_KEY]?.let {
+                DisplayNames.prepare(json.decodeFromString<List<WorkoutDay>>(it), context.resources, legacy = true)
+            }.orEmpty()
+            prefs[WORKOUT_STRUCTURE_KEY] = json.encodeToString(DisplayNames.prepare(transform(latest), context.resources, legacy = false))
+        }
+    }
+
+    fun getWorkoutStructureFlow(): Flow<List<WorkoutDay>> = store.data.map { preferences ->
         preferences[WORKOUT_STRUCTURE_KEY]?.let { jsonString ->
             try {
-                json.decodeFromString<List<WorkoutDay>>(jsonString)
-            } catch (e: Exception) {
-                emptyList()
+                DisplayNames.prepare(json.decodeFromString<List<WorkoutDay>>(jsonString), context.resources, legacy = true)
+            } catch (e: kotlinx.serialization.SerializationException) {
+                throw WorkoutDataException(e)
             }
         } ?: emptyList()
     }
@@ -117,7 +132,7 @@ class WorkoutRepository(private val context: Context) {
     // ── Timer State ──────────────────────────────────────────────────────────
 
     suspend fun saveTimerState(timerState: TimerState?) {
-        context.dataStore.edit { preferences ->
+        store.edit { preferences ->
             if (timerState != null) {
                 preferences[TIMER_STATE_KEY] = json.encodeToString(timerState)
             } else {
@@ -126,12 +141,12 @@ class WorkoutRepository(private val context: Context) {
         }
     }
 
-    fun getTimerStateFlow(): Flow<TimerState?> = context.dataStore.data.map { preferences ->
+    fun getTimerStateFlow(): Flow<TimerState?> = store.data.map { preferences ->
         preferences[TIMER_STATE_KEY]?.let { jsonString ->
             try {
                 json.decodeFromString<TimerState>(jsonString)
-            } catch (e: Exception) {
-                null
+            } catch (e: kotlinx.serialization.SerializationException) {
+                throw WorkoutDataException(e)
             }
         }
     }
@@ -140,12 +155,12 @@ class WorkoutRepository(private val context: Context) {
 
     // ── Sessions: live + history ─────────────────────────────────────────────
 
-    fun getActiveSessionFlow(): Flow<WorkoutSession?> = context.dataStore.data.map { it.readActiveSession() }
+    fun getActiveSessionFlow(): Flow<WorkoutSession?> = store.data.map { it.readActiveSession() }
 
     suspend fun getActiveSession(): WorkoutSession? = getActiveSessionFlow().first()
 
     fun getSessionHistoryFlow(): Flow<List<WorkoutSession>> =
-        context.dataStore.data.map { it.readHistory() }
+        store.data.map { it.readHistory() }
 
     suspend fun getSessionHistory(): List<WorkoutSession> = getSessionHistoryFlow().first()
 
@@ -153,8 +168,8 @@ class WorkoutRepository(private val context: Context) {
         this[ACTIVE_SESSION_KEY]?.let {
             try {
                 json.decodeFromString<WorkoutSession>(it)
-            } catch (e: Exception) {
-                null
+            } catch (e: kotlinx.serialization.SerializationException) {
+                throw WorkoutDataException(e)
             }
         }
 
@@ -162,8 +177,8 @@ class WorkoutRepository(private val context: Context) {
         this[SESSION_HISTORY_KEY]?.let {
             try {
                 json.decodeFromString<List<WorkoutSession>>(it)
-            } catch (e: Exception) {
-                emptyList()
+            } catch (e: kotlinx.serialization.SerializationException) {
+                throw WorkoutDataException(e)
             }
         } ?: emptyList()
 
@@ -187,11 +202,12 @@ class WorkoutRepository(private val context: Context) {
      */
     suspend fun finalizeStaleSession(now: Long = System.currentTimeMillis()): Boolean {
         var closed = false
-        context.dataStore.edit { prefs ->
+        store.edit { prefs ->
             val active = prefs.readActiveSession() ?: return@edit
             if (active.isStaleAt(now)) {
                 prefs.archive(active, active.lastActivityTime)
                 prefs.writeActiveSession(null)
+                prefs.remove(TIMER_STATE_KEY)
                 closed = true
             }
         }
@@ -200,20 +216,21 @@ class WorkoutRepository(private val context: Context) {
 
     /** Explicit "I'm done" — ends the session at [now]. */
     suspend fun endActiveSession(now: Long = System.currentTimeMillis()) {
-        context.dataStore.edit { prefs ->
+        store.edit { prefs ->
             val active = prefs.readActiveSession() ?: return@edit
             prefs.archive(active, now)
             prefs.writeActiveSession(null)
+            prefs.remove(TIMER_STATE_KEY)
         }
     }
 
     /** Throws the live session away without recording it. */
     suspend fun discardActiveSession() {
-        context.dataStore.edit { prefs -> prefs.writeActiveSession(null) }
+        store.edit { prefs -> prefs.writeActiveSession(null) }
     }
 
     suspend fun deleteSessionFromHistory(sessionId: String) {
-        context.dataStore.edit { prefs ->
+        store.edit { prefs ->
             val updated = prefs.readHistory().filterNot { it.id == sessionId }
             prefs[SESSION_HISTORY_KEY] = json.encodeToString(updated)
         }
@@ -279,9 +296,13 @@ class WorkoutRepository(private val context: Context) {
         now: Long = System.currentTimeMillis()
     ): SetResult {
         var result = SetResult(0, false)
-        context.dataStore.edit { prefs ->
+        store.edit { prefs ->
             val progress = prefs.readProgress()
             val previous = progress.exerciseCompletedSets[exerciseId] ?: 0
+            if (previous >= totalSets.coerceAtLeast(1)) {
+                result = SetResult(previous, true)
+                return@edit
+            }
             val next = (previous + 1).coerceAtMost(totalSets.coerceAtLeast(1))
             val isComplete = next >= totalSets
             val weight = progress.exerciseWeights[exerciseId] ?: 0f
@@ -310,7 +331,7 @@ class WorkoutRepository(private val context: Context) {
                         completed = isComplete,
                         firstSetTime = if (entry.firstSetTime == 0L) now else entry.firstSetTime,
                         lastSetTime = now,
-                        repsPerSet = (entry.repsPerSet + reps).takeLast(next)
+                        repsPerSet = (entry.repsPerSet + reps.coerceIn(0, 999)).takeLast(next)
                     )
                 },
                 seed = {
@@ -330,7 +351,7 @@ class WorkoutRepository(private val context: Context) {
 
     /** Corrects the rep count of the set just logged, from the rest timer. */
     suspend fun updateLastSetReps(exerciseId: String, reps: Int) {
-        context.dataStore.edit { prefs ->
+        store.edit { prefs ->
             val active = prefs.readActiveSession() ?: return@edit
             prefs.writeActiveSession(
                 active.copy(
@@ -359,7 +380,7 @@ class WorkoutRepository(private val context: Context) {
     ): Boolean {
         if (dayId.isBlank()) return false
         var cleared = false
-        context.dataStore.edit { prefs ->
+        store.edit { prefs ->
             val today = DateUtils.toIso(now)
             val progress = prefs.readProgress()
             if (progress.dayTrainingDates[dayId] == today) return@edit
@@ -391,7 +412,7 @@ class WorkoutRepository(private val context: Context) {
         now: Long = System.currentTimeMillis()
     ): SetResult {
         var result = SetResult(0, false)
-        context.dataStore.edit { prefs ->
+        store.edit { prefs ->
             val progress = prefs.readProgress()
             val previous = progress.exerciseCompletedSets[exerciseId] ?: 0
             val next = (previous - 1).coerceAtLeast(0)
@@ -438,7 +459,7 @@ class WorkoutRepository(private val context: Context) {
         ctx: SessionContext,
         now: Long = System.currentTimeMillis()
     ) {
-        context.dataStore.edit { prefs ->
+        store.edit { prefs ->
             val progress = prefs.readProgress()
             val sets = if (completed) totalSets else 0
             val weight = progress.exerciseWeights[exerciseId] ?: 0f
@@ -486,7 +507,7 @@ class WorkoutRepository(private val context: Context) {
                         active.copy(
                             exercises = active.exercises.map {
                                 if (it.exerciseId == exerciseId)
-                                    it.copy(completedSets = 0, completed = false)
+                                    it.copy(completedSets = 0, completed = false, repsPerSet = emptyList())
                                 else it
                             },
                             lastActivityTime = now
@@ -502,11 +523,12 @@ class WorkoutRepository(private val context: Context) {
         weight: Float,
         now: Long = System.currentTimeMillis()
     ) {
-        context.dataStore.edit { prefs ->
+        val safeWeight = weight.takeIf { it.isFinite() }?.coerceIn(0f, 10000f) ?: 0f
+        store.edit { prefs ->
             val progress = prefs.readProgress()
             prefs[WORKOUT_PROGRESS_KEY] = json.encodeToString(
                 progress.copy(
-                    exerciseWeights = progress.exerciseWeights + (exerciseId to weight),
+                    exerciseWeights = progress.exerciseWeights + (exerciseId to safeWeight),
                     lastUpdateTime = now
                 )
             )
@@ -517,7 +539,7 @@ class WorkoutRepository(private val context: Context) {
                 prefs.writeActiveSession(
                     active.copy(
                         exercises = active.exercises.map {
-                            if (it.exerciseId == exerciseId) it.copy(weight = weight) else it
+                            if (it.exerciseId == exerciseId) it.copy(weight = safeWeight) else it
                         },
                         lastActivityTime = now
                     )
@@ -532,7 +554,7 @@ class WorkoutRepository(private val context: Context) {
      */
     suspend fun updateExerciseCompletedSets(exerciseId: String, completedSets: Int, totalSets: Int) {
         val now = System.currentTimeMillis()
-        context.dataStore.edit { prefs ->
+        store.edit { prefs ->
             val progress = prefs.readProgress()
             val isComplete = totalSets > 0 && completedSets >= totalSets
             prefs[WORKOUT_PROGRESS_KEY] = json.encodeToString(
@@ -570,8 +592,9 @@ class WorkoutRepository(private val context: Context) {
     }
 
     suspend fun resetWeeklyProgress() {
-        context.dataStore.edit { prefs ->
+        store.edit { prefs ->
             val current = prefs.readProgress()
+            prefs.remove(TIMER_STATE_KEY)
             // A running session belongs to the week being wiped — close it out first so its work
             // still lands in history instead of vanishing.
             prefs.readActiveSession()?.let { active ->
@@ -592,16 +615,18 @@ class WorkoutRepository(private val context: Context) {
     }
 
     suspend fun removeExerciseProgress(exerciseId: String) {
-        val progress = getWorkoutProgress()
-        saveWorkoutProgress(
-            progress.copy(
+        store.edit { prefs ->
+            val progress = prefs.readProgress()
+            prefs[WORKOUT_PROGRESS_KEY] = json.encodeToString(progress.copy(
                 completedExercises = progress.completedExercises - exerciseId,
                 exerciseWeights = progress.exerciseWeights - exerciseId,
                 exerciseNotes = progress.exerciseNotes - exerciseId,
                 exerciseCompletedSets = progress.exerciseCompletedSets - exerciseId,
                 lastUpdateTime = System.currentTimeMillis()
-            )
-        )
+            ))
+            val timer = prefs[TIMER_STATE_KEY]?.let { json.decodeFromString<TimerState>(it) }
+            if (timer?.exerciseId == exerciseId) prefs.remove(TIMER_STATE_KEY)
+        }
     }
 
     /**
@@ -610,7 +635,7 @@ class WorkoutRepository(private val context: Context) {
      * past workouts stay valid even when the current program is rebuilt.
      */
     suspend fun clearAllProgressAndTimerState() {
-        context.dataStore.edit { preferences ->
+        store.edit { preferences ->
             preferences.remove(TIMER_STATE_KEY)
             preferences.remove(ACTIVE_SESSION_KEY)
             preferences[WORKOUT_PROGRESS_KEY] = json.encodeToString(
@@ -627,7 +652,7 @@ class WorkoutRepository(private val context: Context) {
     }
 
     suspend fun clearTimerState() {
-        context.dataStore.edit { preferences -> preferences.remove(TIMER_STATE_KEY) }
+        store.edit { preferences -> preferences.remove(TIMER_STATE_KEY) }
     }
 }
 
@@ -642,3 +667,5 @@ data class SessionContext(
 )
 
 data class SetResult(val completedSets: Int, val exerciseCompleted: Boolean)
+
+class WorkoutDataException(cause: Throwable) : IllegalStateException("Saved workout data could not be read; the original data was retained.", cause)

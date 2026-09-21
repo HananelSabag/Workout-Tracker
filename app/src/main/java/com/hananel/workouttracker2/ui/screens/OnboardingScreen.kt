@@ -1,5 +1,7 @@
 package com.hananel.workouttracker2.ui.screens
 
+import com.hananel.workouttracker2.ui.rememberStorageScope
+
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
@@ -35,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
+import com.hananel.workouttracker2.data.models.getDisplayName
 import com.hananel.workouttracker2.R
 import com.hananel.workouttracker2.data.DefaultData
 import com.hananel.workouttracker2.data.ExerciseBank
@@ -52,7 +55,7 @@ fun OnboardingScreen(
     modifier: Modifier = Modifier
 ) {
     val pagerState = rememberPagerState(pageCount = { 2 })
-    val scope = rememberCoroutineScope()
+    val scope = rememberStorageScope()
     
     com.hananel.workouttracker2.ui.theme.AppBackground(modifier = modifier) {
         Column(
@@ -413,7 +416,7 @@ private fun OnboardingPage2(
 ) {
     val context = LocalContext.current
     val repository = remember { WorkoutRepository(context) }
-    val scope = rememberCoroutineScope()
+    val scope = rememberStorageScope()
     
     // State for custom workout builder
     var showWorkoutBuilder by remember { mutableStateOf(false) }
@@ -429,7 +432,7 @@ private fun OnboardingPage2(
                     // Update enabledDays based on selected days
                     val enabledDays = workoutDays.map { it.dayIndex }.sorted()
                     val prefs = repository.getUserPreferences()
-                    repository.saveUserPreferences(prefs.copy(enabledDays = enabledDays))
+                    repository.updateUserPreferences { it.copy(enabledDays = enabledDays) }
                     onFinish()
                 }
             },
@@ -574,31 +577,8 @@ private fun OnboardingPage2(
             // Skip button at bottom (for existing users who already have data)
             TextButton(
                 onClick = {
-                    // Skip just completes onboarding
-                    // First, clear any potentially corrupted data from cloud backup restore
-                    scope.launch {
-                        // Check if there's valid data (existing user) or corrupted data (cloud restore)
-                        val existingStructure = repository.getWorkoutStructure()
-                        if (existingStructure.isNotEmpty()) {
-                            // Validate the data - check if first exercise nameResId is valid
-                            val firstExercise = existingStructure.firstOrNull()?.exercises?.firstOrNull()
-                            if (firstExercise != null) {
-                                try {
-                                    // Try to get the string - if it fails or returns wrong type of string, clear
-                                    val name = context.getString(firstExercise.nameResId)
-                                    // Check if it's an exercise name (should start with uppercase letter and not contain formatting)
-                                    if (name.contains("%") || name.length < 3) {
-                                        // Corrupted data - clear it
-                                        repository.saveWorkoutStructure(emptyList())
-                                    }
-                                } catch (e: Exception) {
-                                    // Invalid resource ID - clear the data
-                                    repository.saveWorkoutStructure(emptyList())
-                                }
-                            }
-                        }
-                        onFinish()
-                    }
+                    // Skipping setup preserves all existing plans, including custom exercises.
+                    onFinish()
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -763,7 +743,7 @@ internal fun WorkoutBuilderScreen(
     // Exercise selection dialog
     selectedDayIndex?.let { dayIndex ->
         val day = workoutDays[dayIndex]
-        val displayName = if (day.customName.isNotBlank()) day.customName else context.getString(day.nameResId)
+        val displayName = if (day.customName.isNotBlank()) day.customName else day.getDisplayName(context)
         
         ExerciseSelectionDialog(
             dayName = displayName,
@@ -797,7 +777,7 @@ private fun WorkoutDayBuilderCard(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val dayName = context.getString(day.nameResId)
+    val dayName = day.getDisplayName(context)
     var workoutTitle by remember(day.customName) { mutableStateOf(day.customName) }
     
     ElevatedCard(
@@ -924,7 +904,7 @@ private fun ExerciseChip(
                 )
                 Column {
                     Text(
-                        text = context.getString(exercise.nameResId),
+                        text = exercise.getDisplayName(context),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSecondaryContainer

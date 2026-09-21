@@ -1,5 +1,7 @@
 package com.hananel.workouttracker2
 
+import com.hananel.workouttracker2.ui.rememberStorageScope
+
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
@@ -11,6 +13,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
@@ -108,24 +112,7 @@ class MainActivity : ComponentActivity() {
         }
     }
     
-    override fun attachBaseContext(newBase: Context) {
-        // Apply language preference
-        val repository = WorkoutRepository(newBase)
-        val preferences = kotlinx.coroutines.runBlocking {
-            repository.getUserPreferences()
-        }
-        
-        val locale = when (preferences.language) {
-            "he" -> Locale("he")
-            "en" -> Locale("en")
-            else -> Locale.getDefault()
-        }
-        
-        val config = Configuration(newBase.resources.configuration)
-        config.setLocale(locale)
-        
-        super.attachBaseContext(newBase.createConfigurationContext(config))
-    }
+
 }
 
 @Composable
@@ -138,10 +125,20 @@ fun WorkoutTrackerApp(
 
     var preferences by remember { mutableStateOf<com.hananel.workouttracker2.data.models.UserPreferences?>(null) }
 
-    LaunchedEffect(Unit) {
-        repository.getUserPreferencesFlow().collect { prefs ->
-            preferences = prefs
-        }
+    var loadFailed by remember { mutableStateOf(false) }
+    var attempt by remember { mutableIntStateOf(0) }
+    LaunchedEffect(attempt) {
+        loadFailed = false
+        try {
+            repository.getUserPreferencesFlow().collect { prefs -> preferences = prefs }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+        catch (e: Exception) { loadFailed = true }
+    }
+    LaunchedEffect(preferences?.language) {
+        val language = preferences?.language ?: return@LaunchedEffect
+        val locales = android.os.LocaleList.forLanguageTags(if (language == "system") "" else language)
+        val manager = context.getSystemService(android.app.LocaleManager::class.java)
+        if (manager.applicationLocales != locales) manager.applicationLocales = locales
     }
 
     val themeMode = preferences?.getThemeMode() ?: ThemeMode.SYSTEM
@@ -156,7 +153,11 @@ fun WorkoutTrackerApp(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
         ) {
-            AppNavigation(
+            if (loadFailed) {
+                DataErrorScreen(onRetry = { attempt++ })
+            } else if (preferences == null) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            } else AppNavigation(
                 shouldOpenTimerDialog = shouldOpenTimerDialog,
                 onTimerDialogOpened = onTimerDialogOpened
             )
@@ -171,12 +172,18 @@ fun AppNavigation(
 ) {
     val navController = rememberNavController()
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
+    val scope = rememberStorageScope()
     val repository = remember { WorkoutRepository(context) }
     
     // One ViewModel for the whole graph: the workout screen and history share the session flows,
     // and the live session clock must not restart when the user navigates.
-    val sharedViewModel: WorkoutViewModel = remember { WorkoutViewModelFactory(context).create() }
+    val sharedViewModel: WorkoutViewModel = viewModel(factory = WorkoutViewModelFactory(context))
+    val failed by sharedViewModel.error.collectAsState()
+    val editFailed by com.hananel.workouttracker2.ui.StorageFailure.failed.collectAsState()
+    if (failed || editFailed) {
+        DataErrorScreen(onRetry = { com.hananel.workouttracker2.ui.StorageFailure.failed.value = false; sharedViewModel.retry() })
+        return
+    }
 
     var hasCompletedOnboarding by remember { mutableStateOf<Boolean?>(null) }
 
@@ -205,7 +212,7 @@ fun AppNavigation(
                 onComplete = {
                     scope.launch {
                         val prefs = repository.getUserPreferences()
-                        repository.saveUserPreferences(prefs.copy(hasCompletedOnboarding = true))
+                        repository.updateUserPreferences { it.copy(hasCompletedOnboarding = true) }
                         hasCompletedOnboarding = true
                         navController.navigate("workout") {
                             popUpTo("onboarding") { inclusive = true }
@@ -298,7 +305,7 @@ fun AppNavigation(
                         // Update enabledDays based on selected days
                         val enabledDays = workoutDays.map { it.dayIndex }.sorted()
                         val prefs = repository.getUserPreferences()
-                        repository.saveUserPreferences(prefs.copy(enabledDays = enabledDays))
+                        repository.updateUserPreferences { it.copy(enabledDays = enabledDays) }
                         navController.popBackStack()
                     }
                 },
@@ -307,6 +314,20 @@ fun AppNavigation(
                 },
                 loadExistingData = true
             )
+        }
+    }
+}
+
+@Composable
+private fun DataErrorScreen(onRetry: () -> Unit) {
+    androidx.compose.foundation.layout.Column(
+        modifier = Modifier.fillMaxSize().then(Modifier.padding(24.dp)),
+        verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(R.string.data_load_error))
+        androidx.compose.material3.Button(onClick = onRetry) {
+            androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(R.string.retry_loading))
         }
     }
 }

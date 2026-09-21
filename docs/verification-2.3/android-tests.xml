@@ -1,0 +1,46 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuite name="com.hananel.workouttracker2.ExampleInstrumentedTest" tests="38" failures="0" errors="0" skipped="0" time="30.711" timestamp="2026-09-14T15:50:36" hostname="localhost">
+  <properties>
+    <property name="device" value="Pixel_9_Pro_Fold(AVD) - 16" />
+    <property name="flavor" value="" />
+    <property name="project" value=":app" />
+  </properties>
+  <testcase name="useAppContext" classname="com.hananel.workouttracker2.ExampleInstrumentedTest" time="0.026" />
+  <testcase name="customExerciseIsReallySavedAndSurvivesActivityRecreation" classname="com.hananel.workouttracker2.WorkoutStabilityTest" time="10.802" />
+  <testcase name="reminderWithoutExactPermissionAndMalformedReminderDoNotCrash" classname="com.hananel.workouttracker2.WorkoutStabilityTest" time="3.048" />
+  <testcase name="finalSetWithZeroRestIsSavedAndCanBeUndone" classname="com.hananel.workouttracker2.WorkoutStabilityTest" time="3.483" />
+  <testcase name="pausedTimerRecoversAndResumesWithoutLosingItsRemainder" classname="com.hananel.workouttracker2.WorkoutStabilityTest" time="4.321" />
+  <testcase name="expiredTimerRecoversAndStaleNotificationCannotLogTwice" classname="com.hananel.workouttracker2.WorkoutStabilityTest" time="5.167" />
+  <testcase name="concurrentSettingsChangesPreserveBothFields" classname="com.hananel.workouttracker2.data.repository.UpgradeRegressionTest" time="0.26" />
+  <testcase name="corruptPlanIsReportedAndItsOriginalBytesAreRetained" classname="com.hananel.workouttracker2.data.repository.UpgradeRegressionTest" time="0.049" />
+  <testcase name="unknownAndCustomNamesDoNotErasePlansWeightsOrHistory" classname="com.hananel.workouttracker2.data.repository.UpgradeRegressionTest" time="0.095" />
+  <testcase name="pre22DefaultProgramUsesStableIdentitiesEvenWhenOldIdsPointAtOtherStrings" classname="com.hananel.workouttracker2.data.repository.UpgradeRegressionTest" time="0.07" />
+  <testcase name="resourceIdsFromShipped22ResolveAfterResourcesChange" classname="com.hananel.workouttracker2.data.repository.UpgradeRegressionTest" time="0.048" />
+  <testcase name="concurrentPlanChangesPreserveBothExercises" classname="com.hananel.workouttracker2.data.repository.UpgradeRegressionTest" time="0.073" />
+  <testcase name="extraCompletionDoesNotRewriteRepsOrReopenArchivedSession" classname="com.hananel.workouttracker2.data.repository.UpgradeRegressionTest" time="0.065" />
+  <testcase name="completingTheFinalSetMarksTheExerciseComplete" classname="com.hananel.workouttracker2.data.repository.WorkoutRepositoryTest" time="0.098" />
+  <testcase name="correctingTheLastSetsRepsOnlyTouchesThatSet" classname="com.hananel.workouttracker2.data.repository.WorkoutRepositoryTest" time="0.057" />
+  <testcase name="deletingAnExerciseRemovesItsProgress" classname="com.hananel.workouttracker2.data.repository.WorkoutRepositoryTest" time="0.064" />
+  <testcase name="manuallyMarkingCompleteFillsEveryySet" classname="com.hananel.workouttracker2.data.repository.WorkoutRepositoryTest" time="0.029" />
+  <testcase name="freshDayOnlyTouchesItsOwnExercises" classname="com.hananel.workouttracker2.data.repository.WorkoutRepositoryTest" time="0.066" />
+  <testcase name="everySetRecordsItsReps" classname="com.hananel.workouttracker2.data.repository.WorkoutRepositoryTest" time="0.06" />
+  <testcase name="undoingBelowZeroIsANoOp" classname="com.hananel.workouttracker2.data.repository.WorkoutRepositoryTest" time="0.068" />
+  <testcase name="aSessionShorterThanTheTimeoutIsLeftAlone" classname="com.hananel.workouttracker2.data.repository.WorkoutRepositoryTest" time="0.03" />
+  <testcase name="openingTheSameDayAgainWithinTheDayKeepsProgress" classname="com.hananel.workouttracker2.data.repository.WorkoutRepositoryTest" time="0.075" />
+  <testcase name="resettingTheWeekKeepsWeightsAndArchivesTheLiveSession" classname="com.hananel.workouttracker2.data.repository.WorkoutRepositoryTest" time="0.063" />
+  <testcase name="weightIsCapturedOnTheSessionLog" classname="com.hananel.workouttracker2.data.repository.WorkoutRepositoryTest" time="0.063" />
+  <testcase name="freshDayKeepsWorkingWeights" classname="com.hananel.workouttracker2.data.repository.WorkoutRepositoryTest" time="0.069" />
+  <testcase name="theFirstSetOpensASessionAndLaterSetsAccumulateIntoIt" classname="com.hananel.workouttracker2.data.repository.WorkoutRepositoryTest" time="0.065" />
+  <testcase name="anIdleSessionIsClosedAndBackdatedToTheLastAction" classname="com.hananel.workouttracker2.data.repository.WorkoutRepositoryTest" time="0.073" />
+  <testcase name="openingADayOnALaterDateClearsLastSessionsCheckmarks" classname="com.hananel.workouttracker2.data.repository.WorkoutRepositoryTest" time="0.111" />
+  <testcase name="setCountNeverExceedsThePlannedTotal" classname="com.hananel.workouttracker2.data.repository.WorkoutRepositoryTest" time="0.099" />
+  <testcase name="trainingADifferentDayRotatesToAFreshSession" classname="com.hananel.workouttracker2.data.repository.WorkoutRepositoryTest" time="0.063" />
+  <testcase name="aSingleSetExerciseCompletesOnTheVeryFirstTap" classname="com.hananel.workouttracker2.data.repository.WorkoutRepositoryTest" time="0.056" />
+  <testcase name="aSessionWithNoRecordedSetsIsNotWorthKeeping" classname="com.hananel.workouttracker2.data.repository.WorkoutRepositoryTest" time="0.063" />
+  <testcase name="crossingMidnightKeepsOneSession" classname="com.hananel.workouttracker2.data.repository.WorkoutRepositoryTest" time="0.064" />
+  <testcase name="pickingADayIsRememberedEvenWhenItIsSunday" classname="com.hananel.workouttracker2.data.repository.WorkoutRepositoryTest" time="0.037" />
+  <testcase name="undoingASetDropsItsRepsToo" classname="com.hananel.workouttracker2.data.repository.WorkoutRepositoryTest" time="0.065" />
+  <testcase name="aLiveWorkoutIsNeverResetOutFromUnderTheUser" classname="com.hananel.workouttracker2.data.repository.WorkoutRepositoryTest" time="0.064" />
+  <testcase name="undoingASetReopensACompletedExercise" classname="com.hananel.workouttracker2.data.repository.WorkoutRepositoryTest" time="0.067" />
+  <testcase name="endingTheWorkoutArchivesItAndDiscardingDoesNot" classname="com.hananel.workouttracker2.data.repository.WorkoutRepositoryTest" time="0.064" />
+</testsuite>

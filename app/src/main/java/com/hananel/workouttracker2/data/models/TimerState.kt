@@ -38,6 +38,13 @@ data class TimerState(
     val plannedExercises: Int = 0,
     val reps: String = ""
 ) {
+    fun remainingSeconds(now: Long = System.currentTimeMillis()): Int = when {
+        isRestComplete -> 0
+        isPaused -> timeLeft.coerceIn(0, 3600)
+        endsAtEpochMs <= 0L -> 0
+        else -> ((endsAtEpochMs - now + 999L) / 1000L).coerceIn(0L, 3600L).toInt()
+    }
+
     /** The set the user is about to perform once this rest ends. */
     val nextSet: Int get() = (completedSets + 1).coerceAtMost(totalSets)
 }

@@ -5,32 +5,22 @@ import android.content.Context
 import android.content.Intent
 import com.hananel.workouttracker2.data.repository.WorkoutRepository
 import com.hananel.workouttracker2.utils.NotificationHelper
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
-            // Reschedule all enabled alarms after device boot
-            val repository = WorkoutRepository(context)
-            val notificationHelper = NotificationHelper(context)
-            
-            // Use coroutine to load alarms
-            val scope = CoroutineScope(Dispatchers.IO)
-            scope.launch {
-                try {
-                    val preferences = repository.getUserPreferences()
-                    preferences.workoutAlarms
-                        .filter { it.isEnabled }
-                        .forEach { alarm ->
-                            notificationHelper.scheduleWorkoutReminder(alarm)
-                        }
-                } catch (e: Exception) {
-                    e.printStackTrace()
+        if (intent.action !in setOf(Intent.ACTION_BOOT_COMPLETED, Intent.ACTION_MY_PACKAGE_REPLACED)) return
+        val pending = goAsync()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val prefs = WorkoutRepository(context).getUserPreferences()
+                val helper = NotificationHelper(context)
+                prefs.workoutAlarms.forEach { alarm ->
+                    if (prefs.notificationsEnabled && alarm.isEnabled) helper.scheduleWorkoutReminder(alarm)
+                    else helper.cancelWorkoutReminder(alarm.id)
                 }
-            }
+            } catch (e: Exception) { android.util.Log.e("BootReceiver", "Could not restore reminders", e) }
+            finally { pending.finish() }
         }
     }
 }
-

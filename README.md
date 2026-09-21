@@ -7,8 +7,18 @@ timing, and a full training history.
   <img src="app/src/main/res/drawable/workout_logo.png" width="120" alt="Workout Tracker Logo"/>
 </p>
 
-**Latest build:** [`WorkoutTracker-v2.2.apk`](WorkoutTracker-v2.2.apk) — install directly on any
+**Latest build:** [`WorkoutTracker-v2.3.apk`](WorkoutTracker-v2.3.apk) — install directly on any
 Android 13+ device.
+
+## Version 2.3 — original app, stability repairs
+
+Continues the original 2.2 application and package. The original exercise cards, workout flow,
+history and glass theme are retained. The day selector now has calendar dates and workout names,
+adapted from the separate Rebuilt app.
+
+Repairs cover upgrade-safe names, non-destructive load failures, custom exercise persistence,
+ViewModel lifetime, asynchronous rest-timer commands and recovery, optional exact-alarm access,
+notification permissions and atomic settings/plan edits. See [delivery and verification](docs/DELIVERY-2.3.md).
 
 ## ✨ Features
 
@@ -55,7 +65,7 @@ Android 13+ device.
 
 ### 🎨 Liquid-glass UI
 - **One design system** - Frosted panels over a gradient backdrop (`ui/theme/LiquidGlass.kt`)
-- **Segmented day bar** - A single glass tab row with a sliding gradient pill
+- **Named day cards** - A glass week strip with date, workout name, selected day and today marker
 - **Steppers instead of keyboards** - Sets, rest and weight are all ± controls
 - **Dark/Light Theme** - Automatic theme switching based on system settings
 - **Hebrew & English** - Full RTL support and localization
@@ -104,7 +114,7 @@ counting back into the service.
 ### Prerequisites
 - Android Studio Hedgehog or newer
 - JDK 17+
-- Android SDK 34
+- Android SDK 35
 
 ### Installation
 

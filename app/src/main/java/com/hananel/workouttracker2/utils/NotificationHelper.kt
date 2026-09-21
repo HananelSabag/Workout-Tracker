@@ -25,6 +25,14 @@ class NotificationHelper(private val context: Context) {
         const val TIMER_COMPLETE_ID = 1002
     }
     
+    private fun notifySafely(id: Int, notification: android.app.Notification) {
+        createNotificationChannels()
+        val manager = context.getSystemService(NotificationManager::class.java)
+        try {
+            if (manager.areNotificationsEnabled()) manager.notify(id, notification)
+        } catch (e: SecurityException) { android.util.Log.w("WorkoutNotifications", "Notification permission revoked", e) }
+    }
+
     fun createNotificationChannels() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -87,7 +95,7 @@ class NotificationHelper(private val context: Context) {
             .setAutoCancel(true)
             .build()
         
-        notificationManager.notify(1001, notification)
+        notifySafely(1001, notification)
     }
     
     fun showTimerComplete(exerciseName: String, currentSet: Int, totalSets: Int) {
@@ -116,7 +124,7 @@ class NotificationHelper(private val context: Context) {
             .setDefaults(NotificationCompat.DEFAULT_SOUND)
             .build()
         
-        notificationManager.notify(TIMER_COMPLETE_ID, notification)
+        notifySafely(TIMER_COMPLETE_ID, notification)
     }
     
     fun showExerciseComplete(exerciseName: String) {
@@ -144,7 +152,7 @@ class NotificationHelper(private val context: Context) {
             .setDefaults(NotificationCompat.DEFAULT_SOUND)
             .build()
         
-        notificationManager.notify(1004, notification)
+        notifySafely(1004, notification)
     }
     
     fun showWeeklyReset() {
@@ -170,18 +178,19 @@ class NotificationHelper(private val context: Context) {
             .setAutoCancel(true)
             .build()
         
-        notificationManager.notify(1005, notification) // 1005 — avoids collision with TimerService.NOTIFICATION_ID (1003)
+        notifySafely(1005, notification) // 1005 — avoids collision with TimerService.NOTIFICATION_ID (1003)
     }
 
     fun scheduleWorkoutReminder(alarm: WorkoutAlarm) {
-        val timeParts = alarm.time.split(":")
-        val hour = timeParts[0].toInt()
-        val minute = timeParts[1].toInt()
+        cancelWorkoutReminder(alarm.id)
+        if (!alarm.isEnabled) return
+        val time = parseReminderTime(alarm.time) ?: return
+        val (hour, minute) = time
         val alarmId = alarm.id.hashCode()
         
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         
-        alarm.daysOfWeek.forEach { dayOfWeek ->
+        alarm.daysOfWeek.distinct().filter { it in 0..6 }.forEach { dayOfWeek ->
             val calendar = Calendar.getInstance().apply {
                 set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY + dayOfWeek)
                 set(Calendar.HOUR_OF_DAY, hour)
@@ -206,20 +215,15 @@ class NotificationHelper(private val context: Context) {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
             
-            // Use setExactAndAllowWhileIdle for better reliability
-            // This works even in Doze mode and when app is closed
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                alarmManager.setExactAndAllowWhileIdle(
-                    AlarmManager.RTC_WAKEUP,
-                    calendar.timeInMillis,
-                    pendingIntent
-                )
-            } else {
-                alarmManager.setExact(
-                    AlarmManager.RTC_WAKEUP,
-                    calendar.timeInMillis,
-                    pendingIntent
-                )
+            // Exact access is optional, and can be revoked between the check and schedule.
+            try {
+                if (alarmManager.canScheduleExactAlarms()) {
+                    alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, calendar.timeInMillis, pendingIntent)
+                } else {
+                    alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, calendar.timeInMillis, pendingIntent)
+                }
+            } catch (e: SecurityException) {
+                alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, calendar.timeInMillis, pendingIntent)
             }
         }
     }

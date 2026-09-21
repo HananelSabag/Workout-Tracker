@@ -388,4 +388,7 @@
     <string name="end_workout_message">האימון יישמר בהיסטוריה ותוכל לראות אותו בכל זמן.</string>
     <string name="end_workout_confirm">שמור וסיים</string>
     <string name="view_history">להיסטוריה</string>
+    <string name="data_load_error">לא הצלחנו לקרוא או לשמור את הנתונים. הנתונים הקיימים נשמרו. אפשר לנסות שוב.</string>
+    <string name="retry_loading">נסה שוב</string>
+    <string name="unnamed_exercise">תרגיל ללא שם</string>
 </resources>

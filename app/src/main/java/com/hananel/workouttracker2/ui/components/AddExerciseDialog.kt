@@ -51,10 +51,10 @@ fun AddExerciseDialog(
     var weight by remember { mutableStateOf("") }
 
     val isValid = name.isNotBlank() &&
-            sets.toIntOrNull()?.let { it > 0 } == true &&
+            sets.toIntOrNull()?.let { it in 1..100 } == true &&
             reps.isNotBlank() &&
-            restTime.toIntOrNull()?.let { it >= 0 } == true &&
-            (!hasWeight || weight.isEmpty() || weight.toFloatOrNull() != null)
+            restTime.toIntOrNull()?.let { it in 0..3600 } == true &&
+            (!hasWeight || weight.isEmpty() || weight.toFloatOrNull()?.let { it.isFinite() && it in 0f..10000f } == true)
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -223,7 +223,6 @@ fun AddExerciseDialog(
                                 hasWeight,
                                 if (hasWeight) weight.toFloatOrNull() ?: 0f else 0f
                             )
-                            onDismiss()
                         }
                     },
                     enabled = isValid,

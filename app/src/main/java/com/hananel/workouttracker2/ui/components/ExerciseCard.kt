@@ -39,12 +39,14 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.hananel.workouttracker2.data.models.getDisplayName
 import com.hananel.workouttracker2.R
 import com.hananel.workouttracker2.data.models.Exercise
 import com.hananel.workouttracker2.data.models.SessionExerciseLog
@@ -123,7 +125,7 @@ fun ExerciseCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = exercise.customName.ifBlank { stringResource(id = exercise.nameResId) },
+                        text = exercise.customName.ifBlank { exercise.getDisplayName(LocalContext.current) },
                         style = MaterialTheme.typography.titleLarge,
                         fontSize = 19.sp,
                         color = glass.onGlass,
@@ -301,7 +303,7 @@ fun ExerciseCard(
     }
     if (showWeightSheet) {
         WeightSheet(
-            exerciseName = exercise.customName.ifBlank { stringResource(id = exercise.nameResId) },
+            exerciseName = exercise.customName.ifBlank { exercise.getDisplayName(LocalContext.current) },
             initialWeight = weight,
             onDismiss = { showWeightSheet = false },
             onSave = {
@@ -666,7 +668,7 @@ fun ExerciseEditSheet(
 
     GlassSheet(
         title = stringResource(R.string.edit),
-        subtitle = exercise.customName.ifBlank { stringResource(id = exercise.nameResId) },
+        subtitle = exercise.customName.ifBlank { exercise.getDisplayName(LocalContext.current) },
         icon = Icons.Default.Edit,
         onDismiss = onDismiss
     ) {

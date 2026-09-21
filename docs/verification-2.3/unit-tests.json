@@ -1,0 +1,32 @@
+[
+  {
+    "suite": "com.hananel.workouttracker2.data.models.WorkoutSessionTest",
+    "tests": "7",
+    "failures": "0"
+  },
+  {
+    "suite": "com.hananel.workouttracker2.data.PersistenceCompatibilityTest",
+    "tests": "7",
+    "failures": "0"
+  },
+  {
+    "suite": "com.hananel.workouttracker2.ExampleUnitTest",
+    "tests": "1",
+    "failures": "0"
+  },
+  {
+    "suite": "com.hananel.workouttracker2.utils.DateUtilsTest",
+    "tests": "6",
+    "failures": "0"
+  },
+  {
+    "suite": "com.hananel.workouttracker2.utils.RecoveryTest",
+    "tests": "4",
+    "failures": "0"
+  },
+  {
+    "suite": "com.hananel.workouttracker2.utils.RepsUtilsTest",
+    "tests": "6",
+    "failures": "0"
+  }
+]

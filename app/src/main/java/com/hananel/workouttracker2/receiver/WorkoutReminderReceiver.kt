@@ -5,39 +5,23 @@ import android.content.Context
 import android.content.Intent
 import com.hananel.workouttracker2.data.repository.WorkoutRepository
 import com.hananel.workouttracker2.utils.NotificationHelper
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 
 class WorkoutReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        // Get custom message and alarm ID
-        val message = intent.getStringExtra("message")
-        val alarmId = intent.getStringExtra("alarm_id")
-        
-        // Show workout reminder notification
-        NotificationHelper(context).showWorkoutReminder(message)
-        
-        // Reschedule the alarm for next week (since setExact is one-time)
-        if (alarmId != null) {
-            val repository = WorkoutRepository(context)
-            val notificationHelper = NotificationHelper(context)
-            
-            val scope = CoroutineScope(Dispatchers.IO)
-            scope.launch {
-                try {
-                    val preferences = repository.getUserPreferences()
-                    val alarm = preferences.workoutAlarms.find { it.id == alarmId }
-                    
-                    if (alarm != null && alarm.isEnabled) {
-                        // Reschedule for next occurrence
-                        notificationHelper.scheduleWorkoutReminder(alarm)
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-            }
+        val id = intent.getStringExtra("alarm_id") ?: return
+        val pending = goAsync()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val prefs = WorkoutRepository(context).getUserPreferences()
+                val alarm = prefs.workoutAlarms.find { it.id == id && it.isEnabled }
+                val helper = NotificationHelper(context)
+                if (alarm != null && prefs.notificationsEnabled) {
+                    helper.showWorkoutReminder(alarm.customMessage.ifBlank { null })
+                    helper.scheduleWorkoutReminder(alarm)
+                } else helper.cancelWorkoutReminder(id)
+            } catch (e: Exception) { android.util.Log.e("WorkoutReminder", "Could not process reminder", e) }
+            finally { pending.finish() }
         }
     }
 }
-

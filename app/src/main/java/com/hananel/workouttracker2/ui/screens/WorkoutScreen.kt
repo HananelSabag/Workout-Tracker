@@ -1,5 +1,7 @@
 package com.hananel.workouttracker2.ui.screens
 
+import com.hananel.workouttracker2.ui.rememberStorageScope
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -95,7 +97,14 @@ fun WorkoutScreen(
     }
 
     // If the OS killed the app mid-rest, pick the countdown back up where the clock says it should be.
-    LaunchedEffect(Unit) { viewModel.recoverTimerIfInterrupted(context) }
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, viewModel) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) viewModel.recoverTimerIfInterrupted(context)
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     val currentWorkout = remember(selectedDayIndex, workoutDays) {
         workoutDays.find { it.dayIndex == selectedDayIndex }
@@ -110,7 +119,7 @@ fun WorkoutScreen(
     var userClosedSheet by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
+    val scope = rememberStorageScope()
 
     // Say why the checkmarks went away, so a cleared day never reads as lost data.
     LaunchedEffect(Unit) {
@@ -156,7 +165,7 @@ fun WorkoutScreen(
 
     // Per-day completion, so the tab dots reflect that day only — the old header counted every
     // completed exercise in the whole week against the current day's total.
-    val dayTabs = remember(workoutDays, workoutProgress, enabledDays) {
+    val dayTabs = remember(workoutDays, workoutProgress, enabledDays, context) {
         val today = DateUtils.getCurrentDayIndex()
         enabledDays.sorted().map { index ->
             val day = workoutDays.find { it.dayIndex == index }
@@ -166,7 +175,8 @@ fun WorkoutScreen(
                 dayIndex = index,
                 progress = if (exercises.isEmpty()) 0f else done.toFloat() / exercises.size,
                 hasWorkout = exercises.isNotEmpty(),
-                isToday = index == today
+                isToday = index == today,
+                workoutName = day?.getDisplayName(context).orEmpty()
             )
         }
     }
@@ -349,7 +359,7 @@ fun WorkoutScreen(
                                     onToggleComplete = { viewModel.toggleExerciseCompletion(exercise.id) },
                                     onEditExercise = { sets, reps, restTime, newWeight ->
                                         viewModel.updateExercise(exercise.id, sets, reps, restTime)
-                                        if (newWeight > 0) viewModel.updateExerciseWeight(exercise.id, newWeight)
+                                        viewModel.updateExerciseWeight(exercise.id, newWeight)
                                     },
                                     onDeleteExercise = { viewModel.deleteExercise(currentWorkout.id, exercise.id) }
                                 )
@@ -420,16 +430,15 @@ fun WorkoutScreen(
                 now = now,
                 onDismiss = { showEndSessionSheet = false },
                 onConfirm = {
-                    viewModel.endSession(context)
                     showEndSessionSheet = false
-                    scope.launch {
+                    viewModel.endSession(context) { scope.launch {
                         val result = snackbarHostState.showSnackbar(
                             message = context.getString(R.string.workout_saved),
                             actionLabel = context.getString(R.string.view_history),
                             duration = SnackbarDuration.Long
                         )
                         if (result == SnackbarResult.ActionPerformed) onNavigateToHistory()
-                    }
+                    } }
                 }
             )
         }
@@ -457,13 +466,13 @@ fun WorkoutScreen(
     if (showCreateExerciseDialog) {
         AddExerciseDialog(
             onDismiss = { showCreateExerciseDialog = false },
-            onAdd = { name, _, _, _, _, _ ->
-                scope.launch {
-                    snackbarHostState.showSnackbar(
-                        context.getString(R.string.exercise_added_success, name)
-                    )
+            onAdd = { name, sets, reps, restTime, hasWeight, weight ->
+                currentWorkout?.let { day ->
+                    viewModel.addCustomExercise(day.id, name, sets, reps, restTime, hasWeight, weight) {
+                        showCreateExerciseDialog = false
+                        scope.launch { snackbarHostState.showSnackbar(context.getString(R.string.exercise_added_success, name)) }
+                    }
                 }
-                showCreateExerciseDialog = false
             }
         )
     }

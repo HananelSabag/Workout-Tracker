@@ -1,0 +1,22 @@
+{
+  "version": "2.3",
+  "package": "com.hananel.workouttracker2",
+  "base_revision": "33aa8d8",
+  "unit_tests": 31,
+  "android_tests": 38,
+  "test_failures": 0,
+  "test_errors": 0,
+  "lint_errors": 0,
+  "apk_bytes": 43238859,
+  "apk_sha256": "04a6bb06ba83390face37f3fef10c1f1081e5057d385ad46223122a221efac9d",
+  "signer_sha256": "0bc72414ea223f18d63ea1ebcdc2972f99ba2dc02f826a061478caeb4abb98f2",
+  "release_update_install": "passed",
+  "manual_checks": [
+    "restored pre-2.2 default plan names",
+    "Hebrew RTL home",
+    "language switching",
+    "Hebrew settings label fit"
+  ],
+  "device": "Android 16 emulator",
+  "physical_device_tested": false
+}

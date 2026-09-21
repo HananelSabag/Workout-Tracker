@@ -2,6 +2,11 @@ package com.hananel.workouttracker2.ui.screens
 
 import android.content.Context
 import android.content.res.Resources
+import com.hananel.workouttracker2.data.DisplayNames
+import androidx.lifecycle.ViewModelProvider
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hananel.workouttracker2.data.models.Exercise
@@ -52,12 +57,39 @@ class WorkoutViewModel(
     private val _now = MutableStateFlow(System.currentTimeMillis())
     val now: StateFlow<Long> = _now.asStateFlow()
 
-    init {
-        validateAndClearStaleTimerState()
-        runAutoResetIfNeeded()
-        loadData()
-        setInitialDay()
-        startSessionWatchdog()
+    private val _error = MutableStateFlow(false)
+    val error: StateFlow<Boolean> = _error.asStateFlow()
+    private val errorHandler = CoroutineExceptionHandler { _, failure ->
+        android.util.Log.e("WorkoutViewModel", "Workout operation failed", failure)
+        _error.value = true
+    }
+
+    init { initialize() }
+
+    fun retry() {
+        viewModelScope.coroutineContext.cancelChildren()
+        _error.value = false
+        initialize()
+    }
+
+    private fun initialize() {
+        viewModelScope.launch(errorHandler) {
+            // Validate all persisted sections before any startup operation can change them.
+            repository.getWorkoutStructure()
+            repository.getWorkoutProgress()
+            repository.getTimerState()
+            repository.getActiveSession()
+            repository.getSessionHistory()
+            val prefs = repository.getUserPreferences()
+            _selectedDayIndex.value = (if (prefs.autoOpenCurrentDay && !prefs.hasViewedAnyDay)
+                DateUtils.getCurrentDayIndex() else prefs.lastViewedDayIndex).coerceIn(0, 6)
+            repository.finalizeStaleSession()
+            if (prefs.autoResetWeekly && repository.getWorkoutProgress().weekStartDate != DateUtils.getCurrentWeekStart()) {
+                repository.resetWeeklyProgress()
+            }
+            loadData()
+            startSessionWatchdog()
+        }
     }
 
     /**
@@ -68,7 +100,7 @@ class WorkoutViewModel(
      * session, and neither does forgetting to press anything on the way out.
      */
     private fun startSessionWatchdog() {
-        viewModelScope.launch {
+        viewModelScope.launch(errorHandler) {
             // Anything left open from a previous process is settled before the UI reads it.
             repository.finalizeStaleSession()
 
@@ -88,103 +120,44 @@ class WorkoutViewModel(
         }
     }
 
-    private fun runAutoResetIfNeeded() {
-        viewModelScope.launch {
-            val prefs = repository.getUserPreferences()
-            if (!prefs.autoResetWeekly) return@launch
-
-            val progress = repository.getWorkoutProgress()
-            val currentWeekStart = DateUtils.getCurrentWeekStart()
-            if (progress.weekStartDate != currentWeekStart) {
-                repository.resetWeeklyProgress()
-            }
-        }
-    }
-
-    /**
-     * Clears timer state that survived a cloud-backup restore and no longer points at a real
-     * exercise — otherwise the UI shows a countdown for something that doesn't exist.
-     */
-    private fun validateAndClearStaleTimerState() {
-        viewModelScope.launch {
-            val timerState = repository.getTimerState() ?: return@launch
-            val workoutStructure = repository.getWorkoutStructure()
-            val exerciseExists = workoutStructure.flatMap { it.exercises }.any { it.id == timerState.exerciseId }
-            if (workoutStructure.isEmpty() || !exerciseExists) {
-                repository.clearTimerState()
-            }
-        }
-    }
-
-    /**
-     * Returns true if data is valid, false if corrupted (should be cleared). Exercise names that
-     * come back with format placeholders mean the R ids no longer line up with the strings.
-     */
-    private fun isWorkoutDataValid(workoutDays: List<WorkoutDay>): Boolean {
-        if (workoutDays.isEmpty()) return true
-        val res = resources ?: return true
-        val firstExercise = workoutDays.firstOrNull()?.exercises?.firstOrNull() ?: return true
-
-        return try {
-            val name = res.getString(firstExercise.nameResId)
-            !name.contains("%") && name.length >= 3 && name.length < 100
-        } catch (e: Resources.NotFoundException) {
-            false
-        } catch (e: Exception) {
-            false
-        }
-    }
-
-    private fun setInitialDay() {
-        viewModelScope.launch {
-            val prefs = repository.getUserPreferences()
-            // Auto-open only applies before the user has picked a day themselves; afterwards we
-            // always restore their last choice, so minimizing the app — or a theme change that
-            // recreates the Activity — never jumps them to a different day mid-workout.
-            _selectedDayIndex.value = if (prefs.autoOpenCurrentDay && !prefs.hasViewedAnyDay) {
-                DateUtils.getCurrentDayIndex()
-            } else {
-                prefs.lastViewedDayIndex
-            }
-        }
-    }
-
     private fun loadData() {
-        viewModelScope.launch {
-            repository.getWorkoutStructureFlow().collect { savedStructure ->
-                if (isWorkoutDataValid(savedStructure)) {
-                    _workoutDays.value = savedStructure
-                    // Covers app launch, where the structure arrives after the initial day is set.
-                    startFreshDayIfNeeded(_selectedDayIndex.value)
-                } else {
-                    // Corrupted — clear progress and timer state too, they're just as stale.
-                    repository.clearAllProgressAndTimerState()
-                    repository.saveWorkoutStructure(emptyList())
-                    _workoutDays.value = emptyList()
+        viewModelScope.launch(errorHandler) {
+            repository.getWorkoutStructureFlow().distinctUntilChanged().collect { savedStructure ->
+                _workoutDays.value = savedStructure
+                startFreshDayIfNeeded(_selectedDayIndex.value)
+            }
+        }
+
+        viewModelScope.launch(errorHandler) {
+            repository.getWorkoutProgressFlow().collect { _workoutProgress.value = it }
+        }
+
+        viewModelScope.launch(errorHandler) {
+            repository.getTimerStateFlow().distinctUntilChanged().collectLatest { state ->
+                _timerState.value = state
+                if (state != null && state.isRunning && !state.isPaused && !state.isRestComplete) {
+                    while (true) {
+                        val remaining = state.remainingSeconds()
+                        _timerState.value = state.copy(timeLeft = remaining, isRestComplete = remaining == 0, isRunning = remaining > 0)
+                        if (remaining == 0) break
+                        delay(250L)
+                    }
                 }
             }
         }
 
-        viewModelScope.launch {
-            repository.getWorkoutProgressFlow().collect { _workoutProgress.value = it }
-        }
-
-        viewModelScope.launch {
-            repository.getTimerStateFlow().collect { _timerState.value = it }
-        }
-
-        viewModelScope.launch {
+        viewModelScope.launch(errorHandler) {
             repository.getActiveSessionFlow().collect { _activeSession.value = it }
         }
 
-        viewModelScope.launch {
+        viewModelScope.launch(errorHandler) {
             repository.getSessionHistoryFlow().collect { _sessionHistory.value = it }
         }
     }
 
     fun selectDay(dayIndex: Int) {
         _selectedDayIndex.value = dayIndex
-        viewModelScope.launch {
+        viewModelScope.launch(errorHandler) {
             repository.updateLastViewedDay(dayIndex)
             startFreshDayIfNeeded(dayIndex)
         }
@@ -221,7 +194,7 @@ class WorkoutViewModel(
         _workoutProgress.value?.exerciseWeights?.get(exerciseId) ?: 0f
 
     fun updateExerciseWeight(exerciseId: String, weight: Float) {
-        viewModelScope.launch { repository.updateExerciseWeight(exerciseId, weight) }
+        viewModelScope.launch(errorHandler) { repository.updateExerciseWeight(exerciseId, weight) }
     }
 
     // ── Set tracking ─────────────────────────────────────────────────────────
@@ -235,10 +208,10 @@ class WorkoutViewModel(
         val day = exercise?.let { ex -> _workoutDays.value.find { d -> d.exercises.any { it.id == ex.id } } }
             ?: getCurrentDayWorkout()
         val dayName = day?.let { d ->
-            d.customName.ifBlank { resources?.runCatching { getString(d.nameResId) }?.getOrNull().orEmpty() }
+            DisplayNames.dayName(d, resources)
         }.orEmpty()
         val exerciseName = exercise?.let { ex ->
-            ex.customName.ifBlank { resources?.runCatching { getString(ex.nameResId) }?.getOrNull().orEmpty() }
+            DisplayNames.exerciseName(ex, resources)
         }.orEmpty()
 
         return SessionContext(
@@ -260,7 +233,7 @@ class WorkoutViewModel(
      * so often left the card un-ticked.
      */
     fun completeSet(exercise: Exercise, context: Context) {
-        viewModelScope.launch {
+        viewModelScope.launch(errorHandler) {
             val ctx = sessionContextFor(exercise)
             val result = repository.completeSet(
                 exerciseId = exercise.id,
@@ -284,7 +257,7 @@ class WorkoutViewModel(
     private fun startRest(context: Context, exercise: Exercise, ctx: SessionContext, completedSets: Int) {
         TimerService.startRest(
             context = context,
-            exerciseName = ctx.exerciseName.ifBlank { context.getString(exercise.nameResId) },
+            exerciseName = DisplayNames.exerciseName(exercise, context.resources),
             exerciseId = exercise.id,
             restTime = exercise.restTime,
             completedSets = completedSets,
@@ -298,7 +271,7 @@ class WorkoutViewModel(
     }
 
     fun undoSet(exercise: Exercise, context: Context) {
-        viewModelScope.launch {
+        viewModelScope.launch(errorHandler) {
             repository.undoSet(exercise.id, exercise.sets)
             val timer = _timerState.value
             if (timer?.exerciseId == exercise.id) {
@@ -308,7 +281,7 @@ class WorkoutViewModel(
     }
 
     fun toggleExerciseCompletion(exerciseId: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(errorHandler) {
             val exercise = _workoutDays.value.flatMap { it.exercises }.find { it.id == exerciseId } ?: return@launch
             val currentlyCompleted = repository.getWorkoutProgress().completedExercises[exerciseId] ?: false
             repository.setExerciseCompletion(
@@ -323,10 +296,10 @@ class WorkoutViewModel(
     // ── Rest timer controls ──────────────────────────────────────────────────
 
     fun startRestManually(exercise: Exercise, context: Context) {
-        startRest(context, exercise, sessionContextFor(exercise), getExerciseCompletedSets(exercise.id))
+        viewModelScope.launch(errorHandler) { startRest(context, exercise, sessionContextFor(exercise), getExerciseCompletedSets(exercise.id)) }
     }
 
-    fun skipRest(context: Context) = TimerService.skipRest(context)
+    fun skipRest(context: Context) { viewModelScope.launch(errorHandler) { TimerService.skipRest(context) } }
 
     /**
      * Repairs a countdown whose process was killed mid-rest.
@@ -336,47 +309,14 @@ class WorkoutViewModel(
      * really happened: either the rest is already over, or there's time left worth resuming.
      */
     fun recoverTimerIfInterrupted(context: Context) {
-        viewModelScope.launch {
-            val state = repository.getTimerState() ?: return@launch
-            if (!state.isRunning || state.isPaused || state.isRestComplete) return@launch
-            if (TimerService.isRunning) return@launch // Countdown is alive; nothing to repair.
-
-            // A state written before deadlines existed (upgrade from an older build) has no way to
-            // resume, and leaving it would strand a countdown that can never reach zero.
-            if (state.endsAtEpochMs <= 0L) {
-                repository.saveTimerState(
-                    state.copy(timeLeft = 0, isRunning = false, isRestComplete = true)
-                )
-                return@launch
-            }
-
-            val remaining = ((state.endsAtEpochMs - System.currentTimeMillis()) / 1000L).toInt()
-            if (remaining > 0) {
-                TimerService.startRest(
-                    context = context,
-                    exerciseName = state.exerciseName,
-                    exerciseId = state.exerciseId,
-                    restTime = remaining,
-                    completedSets = state.completedSets,
-                    totalSets = state.totalSets,
-                    dayIndex = state.dayIndex,
-                    dayId = state.dayId,
-                    dayName = state.dayName,
-                    plannedExercises = state.plannedExercises,
-                    reps = state.reps,
-                    totalTime = state.totalTime
-                )
-            } else {
-                repository.saveTimerState(
-                    state.copy(timeLeft = 0, isRunning = false, isRestComplete = true)
-                )
-            }
+        viewModelScope.launch(errorHandler) {
+            if (repository.getTimerState() != null && !TimerService.isRunning) TimerService.recover(context)
         }
     }
 
     /** Adjusts the reps recorded for the set that just finished. */
     fun setLastSetReps(exerciseId: String, reps: Int) {
-        viewModelScope.launch { repository.updateLastSetReps(exerciseId, reps) }
+        viewModelScope.launch(errorHandler) { repository.updateLastSetReps(exerciseId, reps) }
     }
 
     /** Reps logged for the set the current rest belongs to, for the timer sheet's stepper. */
@@ -385,15 +325,9 @@ class WorkoutViewModel(
             ?.firstOrNull { it.exerciseId == exerciseId }
             ?.repsPerSet?.lastOrNull() ?: 0
 
-    fun stopTimer(context: Context) = TimerService.stopTimer(context)
+    fun stopTimer(context: Context) { viewModelScope.launch(errorHandler) { TimerService.stopTimer(context) } }
 
-    fun pauseResumeTimer(context: Context) {
-        context.startService(
-            android.content.Intent(context, TimerService::class.java).apply {
-                action = TimerService.ACTION_PAUSE_RESUME
-            }
-        )
-    }
+    fun pauseResumeTimer(context: Context) { viewModelScope.launch(errorHandler) { TimerService.pauseResume(context) } }
 
     /** Completes the set the finished rest was leading up to, straight from the timer sheet. */
     fun completeSetFromTimer(context: Context) {
@@ -404,19 +338,20 @@ class WorkoutViewModel(
 
     // ── Sessions ─────────────────────────────────────────────────────────────
 
-    fun endSession(context: Context) {
-        viewModelScope.launch {
+    fun endSession(context: Context, onSaved: () -> Unit = {}) {
+        viewModelScope.launch(errorHandler) {
             repository.endActiveSession()
             TimerService.stopTimer(context)
+            onSaved()
         }
     }
 
     fun discardSession() {
-        viewModelScope.launch { repository.discardActiveSession() }
+        viewModelScope.launch(errorHandler) { repository.discardActiveSession() }
     }
 
     fun deleteSession(sessionId: String) {
-        viewModelScope.launch { repository.deleteSessionFromHistory(sessionId) }
+        viewModelScope.launch(errorHandler) { repository.deleteSessionFromHistory(sessionId) }
     }
 
     /** Most recent finished session for a given weekday — powers the "last time" comparison. */
@@ -434,95 +369,64 @@ class WorkoutViewModel(
             }
 
     fun resetWeeklyProgress() {
-        viewModelScope.launch { repository.resetWeeklyProgress() }
+        viewModelScope.launch(errorHandler) { repository.resetWeeklyProgress() }
     }
 
     // ── Structure editing ────────────────────────────────────────────────────
 
     fun updateExercise(exerciseId: String, sets: Int, reps: String, restTime: Int) {
-        viewModelScope.launch {
-            val currentDays = _workoutDays.value.toMutableList()
-            var updated = false
-
-            for (i in currentDays.indices) {
-                val day = currentDays[i]
-                val exerciseIndex = day.exercises.indexOfFirst { it.id == exerciseId }
-                if (exerciseIndex != -1) {
-                    val updatedExercises = day.exercises.toMutableList()
-                    updatedExercises[exerciseIndex] = updatedExercises[exerciseIndex].copy(
-                        sets = sets,
-                        reps = reps,
-                        restTime = restTime
-                    )
-                    currentDays[i] = day.copy(exercises = updatedExercises)
-                    updated = true
-                    break
-                }
-            }
-
-            if (updated) {
-                _workoutDays.value = currentDays
-                repository.saveWorkoutStructure(currentDays)
-            }
+        viewModelScope.launch(errorHandler) {
+            repository.updateWorkoutStructure { days -> days.map { day ->
+                day.copy(exercises = day.exercises.map { ex ->
+                    if (ex.id == exerciseId) ex.copy(sets = sets.coerceIn(1, 100), reps = reps, restTime = restTime.coerceIn(0, 3600)) else ex
+                })
+            } }
         }
     }
 
     fun addExerciseFromBank(dayId: String, bankItem: com.hananel.workouttracker2.data.models.ExerciseBankItem) {
-        viewModelScope.launch {
-            val currentDays = _workoutDays.value.toMutableList()
-            val dayIndex = currentDays.indexOfFirst { it.id == dayId }
-            if (dayIndex == -1) return@launch
+        val exercise = Exercise(id = java.util.UUID.randomUUID().toString(), nameResId = bankItem.nameResId,
+            sets = bankItem.defaultSets, reps = bankItem.defaultReps, restTime = bankItem.defaultRestTime,
+            hasWeight = bankItem.hasWeight, muscleGroups = bankItem.muscleGroups, equipment = bankItem.equipment)
+        viewModelScope.launch(errorHandler) {
+            repository.updateWorkoutStructure { days -> days.map { if (it.id == dayId) it.copy(exercises = it.exercises + exercise) else it } }
+        }
+    }
 
-            val day = currentDays[dayIndex]
-            val newExercise = Exercise(
-                // Timestamp suffix keeps repeated additions of the same catalog item distinct.
-                id = "${bankItem.id}_${System.currentTimeMillis()}",
-                nameResId = bankItem.nameResId,
-                sets = bankItem.defaultSets,
-                reps = bankItem.defaultReps,
-                restTime = bankItem.defaultRestTime,
-                hasWeight = bankItem.hasWeight,
-                muscleGroups = bankItem.muscleGroups,
-                equipment = bankItem.equipment
-            )
-
-            currentDays[dayIndex] = day.copy(exercises = day.exercises + newExercise)
-            _workoutDays.value = currentDays
-            repository.saveWorkoutStructure(currentDays)
+    fun addCustomExercise(dayId: String, name: String, sets: Int, reps: String, restTime: Int, hasWeight: Boolean, weight: Float, onSaved: () -> Unit = {}) {
+        if (name.isBlank()) return
+        val exercise = Exercise(id = java.util.UUID.randomUUID().toString(), nameResId = 0, customName = name.trim(), isCustom = true,
+            sets = sets.coerceIn(1, 100), reps = reps, restTime = restTime.coerceIn(0, 3600), hasWeight = hasWeight)
+        viewModelScope.launch(errorHandler) {
+            repository.updateWorkoutStructure { days ->
+                require(days.any { it.id == dayId }) { "Workout day no longer exists" }
+                days.map { if (it.id == dayId) it.copy(exercises = it.exercises + exercise) else it }
+            }
+            if (hasWeight) repository.updateExerciseWeight(exercise.id, weight)
+            onSaved()
         }
     }
 
     fun renameWorkoutDay(dayId: String, newName: String) {
-        viewModelScope.launch {
-            val currentDays = _workoutDays.value.toMutableList()
-            val index = currentDays.indexOfFirst { it.id == dayId }
-            if (index != -1) {
-                currentDays[index] = currentDays[index].copy(customName = newName)
-                _workoutDays.value = currentDays
-                repository.saveWorkoutStructure(currentDays)
-            }
+        viewModelScope.launch(errorHandler) {
+            repository.updateWorkoutStructure { days -> days.map { if (it.id == dayId) it.copy(customName = newName.trim()) else it } }
         }
     }
 
     fun deleteExercise(dayId: String, exerciseId: String) {
-        viewModelScope.launch {
-            val currentDays = _workoutDays.value.toMutableList()
-            val dayIndex = currentDays.indexOfFirst { it.id == dayId }
-            if (dayIndex == -1) return@launch
-
-            val day = currentDays[dayIndex]
-            currentDays[dayIndex] = day.copy(exercises = day.exercises.filter { it.id != exerciseId })
-            _workoutDays.value = currentDays
-            repository.saveWorkoutStructure(currentDays)
+        viewModelScope.launch(errorHandler) {
+            repository.updateWorkoutStructure { days -> days.map { if (it.id == dayId) it.copy(exercises = it.exercises.filterNot { ex -> ex.id == exerciseId }) else it } }
             repository.removeExerciseProgress(exerciseId)
         }
     }
 }
 
-// Factory for creating ViewModel with repository
-class WorkoutViewModelFactory(private val context: Context) {
-    fun create(): WorkoutViewModel {
-        val repository = WorkoutRepository(context)
-        return WorkoutViewModel(repository, context.resources)
+class WorkoutViewModelFactory(context: Context) : ViewModelProvider.Factory {
+    private val appContext = context.applicationContext
+    private val resources = context.resources
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        require(modelClass.isAssignableFrom(WorkoutViewModel::class.java))
+        return WorkoutViewModel(WorkoutRepository(appContext), resources) as T
     }
 }

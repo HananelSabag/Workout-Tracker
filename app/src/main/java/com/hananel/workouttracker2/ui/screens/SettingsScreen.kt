@@ -1,5 +1,7 @@
 package com.hananel.workouttracker2.ui.screens
 
+import com.hananel.workouttracker2.ui.rememberStorageScope
+
 import android.app.Activity
 import android.content.Intent
 import androidx.compose.foundation.Image
@@ -49,7 +51,7 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     val repository = remember { WorkoutRepository(context) }
-    val scope = rememberCoroutineScope()
+    val scope = rememberStorageScope()
     
     var preferences by remember { mutableStateOf(UserPreferences()) }
     var showResetDialog by remember { mutableStateOf(false) }
@@ -69,7 +71,7 @@ fun SettingsScreen(
                 scope.launch {
                     repository.saveWorkoutStructure(workoutDays)
                     val enabledDays = workoutDays.map { day -> day.dayIndex }.sorted()
-                    repository.saveUserPreferences(preferences.copy(enabledDays = enabledDays))
+                    repository.updateUserPreferences { it.copy(enabledDays = enabledDays) }
                     showWorkoutBuilder = false
                 }
             },
@@ -178,8 +180,7 @@ fun SettingsScreen(
                         selected = preferences.language,
                         onSelect = { lang ->
                             scope.launch {
-                                repository.saveUserPreferences(preferences.copy(language = lang))
-                                (context as? Activity)?.recreate()
+                                repository.updateUserPreferences { it.copy(language = lang) }
                             }
                         }
                     )
@@ -199,7 +200,7 @@ fun SettingsScreen(
                         selected = preferences.theme,
                         onSelect = { theme ->
                             scope.launch {
-                                repository.saveUserPreferences(preferences.copy(theme = theme))
+                                repository.updateUserPreferences { it.copy(theme = theme) }
                             }
                         }
                     )
@@ -232,9 +233,12 @@ fun SettingsScreen(
                         checked = preferences.notificationsEnabled,
                         onCheckedChange = { enabled ->
                             scope.launch {
-                                repository.saveUserPreferences(
-                                    preferences.copy(notificationsEnabled = enabled)
-                                )
+                                repository.updateUserPreferences { it.copy(notificationsEnabled = enabled) }
+                                val helper = com.hananel.workouttracker2.utils.NotificationHelper(context)
+                                repository.getUserPreferences().workoutAlarms.forEach { alarm ->
+                                    if (enabled && alarm.isEnabled) helper.scheduleWorkoutReminder(alarm)
+                                    else helper.cancelWorkoutReminder(alarm.id)
+                                }
                             }
                         }
                     )
@@ -249,9 +253,7 @@ fun SettingsScreen(
                         checked = preferences.autoResetWeekly,
                         onCheckedChange = { enabled ->
                             scope.launch {
-                                repository.saveUserPreferences(
-                                    preferences.copy(autoResetWeekly = enabled)
-                                )
+                                repository.updateUserPreferences { it.copy(autoResetWeekly = enabled) }
                             }
                         }
                     )
@@ -301,9 +303,7 @@ fun SettingsScreen(
                         subtitle = null,
                         onClick = {
                             scope.launch {
-                                repository.saveUserPreferences(
-                                    preferences.copy(hasCompletedOnboarding = false)
-                                )
+                                repository.updateUserPreferences { it.copy(hasCompletedOnboarding = false) }
                                 (context as? Activity)?.let { activity ->
                                     activity.finish()
                                     activity.startActivity(Intent(activity, activity::class.java))
@@ -349,9 +349,7 @@ fun SettingsScreen(
             onDismiss = { showScheduleSheet = false },
             onSave = { newDays ->
                 scope.launch {
-                    repository.saveUserPreferences(
-                        preferences.copy(enabledDays = newDays.sorted())
-                    )
+                    repository.updateUserPreferences { it.copy(enabledDays = newDays.sorted()) }
                     showScheduleSheet = false
                 }
             }
@@ -578,10 +576,15 @@ private fun InlineSegmentedSetting(
                 SegmentedButton(
                     selected = selected == value,
                     onClick = { onSelect(value) },
+                    icon = {},
                     shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size)
                 ) {
                     Text(
                         text = labels[index],
+                        style = MaterialTheme.typography.labelMedium,
+                        maxLines = 2,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                         fontWeight = if (selected == value) FontWeight.Bold else FontWeight.Medium
                     )
                 }
