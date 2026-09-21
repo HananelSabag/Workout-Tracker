@@ -1,13 +1,13 @@
 package com.hananel.workouttracker2.ui
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /** Shared error surface for edits made outside the workout ViewModel (settings, builder, alarms). */
@@ -20,21 +20,26 @@ object StorageFailure {
 }
 
 /**
- * Scope for storage writes launched from a screen, cancelled when that screen leaves composition.
+ * The composition's scope — its frame clock, cancelled when the screen leaves — run on the main
+ * thread under a [SupervisorJob].
  *
- * Deliberately NOT [androidx.compose.runtime.rememberCoroutineScope]: the job it hands out is a
- * child of the recomposer's job, and a plain job passes a child's failure upwards. A failed write
- * would therefore cancel the recomposer itself — recomposition stops, and the screen freezes on its
- * last frame instead of showing the error state this handler sets. A SupervisorJob keeps the
- * failure local, so the handler runs while the UI is still alive to render it.
+ * A plain child job passes a failure upwards, and the composition scope's job is itself a child of
+ * the recomposer's, so one failed write cancelled the recomposer: the flag below flipped, but the
+ * screen froze on its last frame and never drew the error. A supervisor keeps the failure local.
+ * The frame clock must stay: animations launched here (onboarding pages its pager) throw without
+ * the composition's MonotonicFrameClock. The dispatcher is pinned to main: work here resumes after
+ * DataStore writes and goes on to navigate, which must happen on the main thread whatever
+ * dispatcher the composition supplies (under test it supplies one that resumes on the caller).
  */
 @Composable
 fun rememberStorageScope(): CoroutineScope {
-    val scope = remember {
-        CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate + StorageFailure.handler)
+    val composition = rememberCoroutineScope()
+    return remember(composition) {
+        CoroutineScope(
+            composition.coroutineContext +
+                Dispatchers.Main.immediate +
+                SupervisorJob(composition.coroutineContext[Job]) +
+                StorageFailure.handler
+        )
     }
-    DisposableEffect(scope) {
-        onDispose { scope.cancel() }
-    }
-    return scope
 }

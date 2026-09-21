@@ -661,9 +661,14 @@ fun ExerciseEditSheet(
     onDismiss: () -> Unit,
     onSave: (sets: Int, reps: String, restTime: Int, weight: Float) -> Unit
 ) {
-    var sets by remember { mutableIntStateOf(exercise.sets.coerceIn(1, 20)) }
+    // The steppers stop at 20 sets / 10 min, but an exercise created through the add dialog can go
+    // up to 100 / 3600. Stretch the range to the stored value instead of clamping it, or saving an
+    // unrelated field (reps) would silently cut the sets or rest down.
+    val setsRange = 1..maxOf(20, exercise.sets)
+    val restRange = 0..maxOf(600, exercise.restTime)
+    var sets by remember { mutableIntStateOf(exercise.sets.coerceIn(setsRange)) }
     var reps by remember { mutableStateOf(exercise.reps) }
-    var restTime by remember { mutableIntStateOf(exercise.restTime.coerceIn(0, 600)) }
+    var restTime by remember { mutableIntStateOf(exercise.restTime.coerceIn(restRange)) }
     var weight by remember { mutableFloatStateOf(currentWeight) }
 
     GlassSheet(
@@ -680,7 +685,7 @@ fun ExerciseEditSheet(
                 label = stringResource(R.string.sets),
                 value = sets,
                 onValueChange = { sets = it },
-                range = 1..20,
+                range = setsRange,
                 icon = Icons.Default.Repeat,
                 accent = Electric,
                 modifier = Modifier.weight(1f)
@@ -690,7 +695,7 @@ fun ExerciseEditSheet(
                 value = restTime,
                 onValueChange = { restTime = it },
                 step = 15,
-                range = 0..600,
+                range = restRange,
                 icon = Icons.Default.Timer,
                 accent = Amber,
                 modifier = Modifier.weight(1f)

@@ -420,13 +420,18 @@ private fun OnboardingPage2(
     
     // State for custom workout builder
     var showWorkoutBuilder by remember { mutableStateOf(false) }
+
+    // Drawn in place, not navigated to: system back must close it like its own back arrow does.
+    androidx.activity.compose.BackHandler(enabled = showWorkoutBuilder) { showWorkoutBuilder = false }
     
     if (showWorkoutBuilder) {
         WorkoutBuilderScreen(
             onFinish = { workoutDays ->
                 scope.launch {
-                    // CRITICAL: Clear ALL stale data first (cloud backup restore fix)
-                    repository.clearAllProgressAndTimerState()
+                    // Clears checkmarks, set counts and any timer a cloud restore brought back, but
+                    // keeps weights and notes and files a running workout into history. Onboarding is
+                    // also reachable from Settings → Help, so this runs for users with real data.
+                    repository.resetWeeklyProgress()
                     
                     repository.saveWorkoutStructure(workoutDays)
                     // Update enabledDays based on selected days
@@ -474,9 +479,8 @@ private fun OnboardingPage2(
                     modifier = Modifier.fillMaxWidth(),
                     onClick = {
                         scope.launch {
-                            // CRITICAL: Clear ALL stale data first
-                            // This fixes issues with cloud backup restoring old timer state/progress
-                            repository.clearAllProgressAndTimerState()
+                            // Same reset as the builder path above — never wipes weights.
+                            repository.resetWeeklyProgress()
                             val defaultStructure = DefaultData.getDefaultWorkoutStructure()
                             repository.saveWorkoutStructure(defaultStructure)
                             onFinish()

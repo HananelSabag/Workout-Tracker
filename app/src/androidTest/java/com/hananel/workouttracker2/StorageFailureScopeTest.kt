@@ -1,5 +1,7 @@
 package com.hananel.workouttracker2
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -11,6 +13,7 @@ import com.hananel.workouttracker2.ui.rememberStorageScope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.junit.After
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -30,6 +33,24 @@ class StorageFailureScopeTest {
     // screen while it is set — leaving it on here would fail every screen test that follows.
     @Before fun clearFlag() { StorageFailure.failed.value = false }
     @After fun clearFlagAgain() { StorageFailure.failed.value = false }
+
+    @Test fun animationsLaunchedInTheScopeStillRun() {
+        // Onboarding's "next" pages the pager from this scope; an animation needs the composition's
+        // frame clock, which a scope built from scratch doesn't carry.
+        lateinit var scope: CoroutineScope
+        compose.setContent {
+            scope = rememberStorageScope()
+            Text("page")
+        }
+        var finished = false
+        scope.launch {
+            Animatable(0f).animateTo(1f, tween(100))
+            finished = true
+        }
+        compose.waitUntil(5_000) { finished || StorageFailure.failed.value }
+        assertFalse(StorageFailure.failed.value)
+        assertTrue(finished)
+    }
 
     @Test fun failedWriteSetsTheFlagAndLeavesTheScreenRecomposing() {
         lateinit var scope: CoroutineScope

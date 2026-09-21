@@ -26,6 +26,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -225,32 +227,32 @@ fun AppNavigation(
             WorkoutScreen(
                 viewModel = sharedViewModel,
                 onNavigateToSettings = {
-                    navController.navigate("settings")
+                    navController.navigate("settings") { launchSingleTop = true }
                 },
                 onNavigateToAlarms = {
-                    navController.navigate("alarms")
+                    navController.navigate("alarms") { launchSingleTop = true }
                 },
                 onNavigateToCatalog = { dayId ->
-                    navController.navigate("exerciseCatalog/$dayId")
+                    navController.navigate("exerciseCatalog/$dayId") { launchSingleTop = true }
                 },
                 onNavigateToWorkoutBuilder = {
-                    navController.navigate("workoutBuilder")
+                    navController.navigate("workoutBuilder") { launchSingleTop = true }
                 },
                 onNavigateToHistory = {
-                    navController.navigate("history")
+                    navController.navigate("history") { launchSingleTop = true }
                 },
                 shouldOpenTimerDialog = shouldOpenTimerDialog,
                 onTimerDialogOpened = onTimerDialogOpened
             )
         }
 
-        composable("history") {
+        composable("history") { entry ->
             // Same ViewModel instance as the workout screen — history reads the session flows it
             // already collects, so there's nothing to re-load on navigation.
             val sessions by sharedViewModel.sessionHistory.collectAsState()
             HistoryScreen(
                 sessions = sessions,
-                onNavigateBack = { navController.popBackStack() },
+                onNavigateBack = { navController.ifStillOn(entry) { navController.popBackStack() } },
                 onDeleteSession = { sharedViewModel.deleteSession(it) }
             )
         }
@@ -261,31 +263,34 @@ fun AppNavigation(
             com.hananel.workouttracker2.ui.screens.ExerciseCatalogScreen(
                 dayId = dayId,
                 onNavigateBack = {
-                    navController.popBackStack()
+                    navController.ifStillOn(backStackEntry) { navController.popBackStack() }
                 },
                 onExerciseSelected = { bankItem ->
-                    sharedViewModel.addExerciseFromBank(dayId, bankItem)
-                    navController.popBackStack()
+                    // Guarded as a whole, so a double tap can't add the exercise twice either.
+                    navController.ifStillOn(backStackEntry) {
+                        sharedViewModel.addExerciseFromBank(dayId, bankItem)
+                        navController.popBackStack()
+                    }
                 }
             )
         }
         
-        composable("alarms") {
+        composable("alarms") { entry ->
             val repository = remember { WorkoutRepository(context) }
             
             AlarmsScreen(
                 onNavigateBack = {
-                    navController.popBackStack()
+                    navController.ifStillOn(entry) { navController.popBackStack() }
                 }
             )
         }
         
-        composable("settings") {
+        composable("settings") { entry ->
             val repository = remember { WorkoutRepository(context) }
             
             SettingsScreen(
                 onNavigateBack = {
-                    navController.popBackStack()
+                    navController.ifStillOn(entry) { navController.popBackStack() }
                 },
                 onResetWeekly = {
                     scope.launch {
@@ -295,7 +300,7 @@ fun AppNavigation(
             )
         }
         
-        composable("workoutBuilder") {
+        composable("workoutBuilder") { entry ->
             val repository = remember { WorkoutRepository(context) }
             
             WorkoutBuilderScreen(
@@ -306,16 +311,27 @@ fun AppNavigation(
                         val enabledDays = workoutDays.map { it.dayIndex }.sorted()
                         val prefs = repository.getUserPreferences()
                         repository.updateUserPreferences { it.copy(enabledDays = enabledDays) }
-                        navController.popBackStack()
+                        navController.ifStillOn(entry) { navController.popBackStack() }
                     }
                 },
                 onBack = {
-                    navController.popBackStack()
+                    navController.ifStillOn(entry) { navController.popBackStack() }
                 },
                 loadExistingData = true
             )
         }
     }
+}
+
+/**
+ * Runs [action] only while [entry] is still the destination on top of the back stack.
+ *
+ * A popped destination keeps fading out — and taking taps — for 700 ms, so a quick second tap on a
+ * back arrow popped the workout screen underneath as well and left an empty screen that only
+ * killing the app could leave.
+ */
+private inline fun NavController.ifStillOn(entry: NavBackStackEntry, action: () -> Unit) {
+    if (currentBackStackEntry?.id == entry.id) action()
 }
 
 @Composable

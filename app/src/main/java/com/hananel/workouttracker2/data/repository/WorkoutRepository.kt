@@ -300,6 +300,28 @@ class WorkoutRepository(context: Context, private val store: DataStore<Preferenc
             val progress = prefs.readProgress()
             val previous = progress.exerciseCompletedSets[exerciseId] ?: 0
             if (previous >= totalSets.coerceAtLeast(1)) {
+                // Nothing left to log: a repeated tap after the final set, or the plan was edited
+                // down to (or below) the sets already done. Never count another set — but in the
+                // second case the exercise was never flagged, so flag it now or the button is dead.
+                if (progress.completedExercises[exerciseId] != true) {
+                    prefs[WORKOUT_PROGRESS_KEY] = json.encodeToString(
+                        progress.copy(
+                            completedExercises = progress.completedExercises + (exerciseId to true),
+                            lastUpdateTime = now
+                        )
+                    )
+                    // Same rule as a weight edit: never revive a session that already timed out.
+                    prefs.readActiveSession()?.takeIf { !it.isStaleAt(now) }?.let { active ->
+                        prefs.writeActiveSession(
+                            active.copy(
+                                exercises = active.exercises.map {
+                                    if (it.exerciseId == exerciseId) it.copy(completed = true, plannedSets = totalSets) else it
+                                },
+                                lastActivityTime = now
+                            )
+                        )
+                    }
+                }
                 result = SetResult(previous, true)
                 return@edit
             }
@@ -630,9 +652,10 @@ class WorkoutRepository(context: Context, private val store: DataStore<Preferenc
     }
 
     /**
-     * Clears ALL progress and timer state. Used when installing a new workout program, and when
-     * corrupt data is detected after a cloud-backup restore. History is deliberately preserved —
-     * past workouts stay valid even when the current program is rebuilt.
+     * Clears ALL progress — weights and notes included — plus timer and live-session state, without
+     * reading what is stored. History is preserved. Test setup only: installing a program goes
+     * through [resetWeeklyProgress], which keeps weights and archives a running session instead of
+     * dropping it.
      */
     suspend fun clearAllProgressAndTimerState() {
         store.edit { preferences ->

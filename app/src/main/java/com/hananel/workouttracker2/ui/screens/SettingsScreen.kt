@@ -64,6 +64,10 @@ fun SettingsScreen(
         }
     }
     
+    // The builder is drawn in place of this screen rather than as its own destination, so without
+    // this the system back gesture popped Settings itself and threw the unsaved plan away.
+    androidx.activity.compose.BackHandler(enabled = showWorkoutBuilder) { showWorkoutBuilder = false }
+
     // Show Workout Builder if requested
     if (showWorkoutBuilder) {
         WorkoutBuilderScreen(

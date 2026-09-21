@@ -80,19 +80,18 @@ object DateUtils {
     fun durationMinutes(millis: Long): Int =
         TimeUnit.MILLISECONDS.toMinutes(millis.coerceAtLeast(0)).toInt()
 
-    /** Whole days between [timestamp] and now, for "לפני 3 ימים" labels. */
+    /**
+     * Calendar days between [timestamp] and now, for "לפני 3 ימים" labels.
+     *
+     * Counts dates, not 24-hour blocks: the day the clocks go forward is 23 hours long, so dividing
+     * the gap between two midnights by a day's length read "yesterday" as "today" and left every
+     * older session one day short until the clocks went back.
+     */
     fun daysAgo(timestamp: Long, now: Long = System.currentTimeMillis()): Int {
-        val startOfDay = { millis: Long ->
-            Calendar.getInstance().apply {
-                timeInMillis = millis
-                set(Calendar.HOUR_OF_DAY, 0)
-                set(Calendar.MINUTE, 0)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
-            }.timeInMillis
-        }
-        val diff = startOfDay(now) - startOfDay(timestamp)
-        return TimeUnit.MILLISECONDS.toDays(diff).toInt()
+        val zone = java.time.ZoneId.systemDefault()
+        val then = java.time.Instant.ofEpochMilli(timestamp).atZone(zone).toLocalDate()
+        val today = java.time.Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
+        return java.time.temporal.ChronoUnit.DAYS.between(then, today).toInt()
     }
 }
 

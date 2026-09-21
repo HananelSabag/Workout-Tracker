@@ -2,7 +2,10 @@ package com.hananel.workouttracker2.utils
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import java.time.ZoneId
+import java.time.ZonedDateTime
 import java.util.Calendar
+import java.util.TimeZone
 import java.util.concurrent.TimeUnit
 
 class DateUtilsTest {
@@ -51,6 +54,24 @@ class DateUtilsTest {
 
         assertEquals(0, DateUtils.daysAgo(now, now))
         assertEquals(3, DateUtils.daysAgo(now - TimeUnit.DAYS.toMillis(3), now))
+    }
+
+    @Test
+    fun `daysAgo stays exact across Israeli clock changes`() {
+        val original = TimeZone.getDefault()
+        TimeZone.setDefault(TimeZone.getTimeZone("Asia/Jerusalem"))
+        try {
+            val zone = ZoneId.of("Asia/Jerusalem")
+            fun at(month: Int, day: Int) = ZonedDateTime.of(2026, month, day, 10, 0, 0, 0, zone).toInstant().toEpochMilli()
+            // Clocks went forward at 02:00 on 27 March 2026, so that day was only 23 hours long.
+            assertEquals(1, DateUtils.daysAgo(at(3, 27), at(3, 28)))
+            assertEquals(2, DateUtils.daysAgo(at(3, 26), at(3, 28)))
+            assertEquals(12, DateUtils.daysAgo(at(3, 20), at(4, 1)))
+            // And back at 02:00 on 25 October — a 25-hour day.
+            assertEquals(1, DateUtils.daysAgo(at(10, 25), at(10, 26)))
+        } finally {
+            TimeZone.setDefault(original)
+        }
     }
 
     @Test

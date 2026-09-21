@@ -79,6 +79,23 @@ class WorkoutRepositoryTest {
     }
 
     @Test
+    fun cuttingThePlanBelowTheSetsAlreadyDoneLetsTheButtonFinishTheExercise() = runBlocking {
+        // Planned 5, did 4, then edited the exercise down to 4 sets. The card offers "finish last
+        // set"; the tap reported success but never marked the exercise done, so it did nothing.
+        repeat(4) { repository.completeSet("ex1", totalSets = 5, ctx = ctx, now = start) }
+
+        val result = repository.completeSet("ex1", totalSets = 4, ctx = ctx, now = start + 1_000)
+
+        assertTrue(result.exerciseCompleted)
+        val progress = repository.getWorkoutProgress()
+        assertEquals(4, progress.exerciseCompletedSets["ex1"]) // no extra set logged
+        assertTrue(progress.completedExercises["ex1"] ?: false)
+        val log = repository.getActiveSession()!!.exercises.single()
+        assertEquals(4, log.completedSets)
+        assertTrue(log.completed)
+    }
+
+    @Test
     fun undoingASetReopensACompletedExercise() = runBlocking {
         repeat(3) { repository.completeSet("ex1", totalSets = 3, ctx = ctx) }
         assertTrue(repository.getWorkoutProgress().completedExercises["ex1"] ?: false)

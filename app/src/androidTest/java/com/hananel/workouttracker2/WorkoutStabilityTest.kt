@@ -49,6 +49,20 @@ class WorkoutStabilityTest {
         runBlocking { repository.clearTimerState() }
     }
 
+    @Test fun doubleTappingBackCannotPopTheWorkoutScreenToo() {
+        compose.onNodeWithContentDescription(text(R.string.settings)).performClick()
+        compose.waitUntil(10_000) { compose.onAllNodesWithContentDescription(text(R.string.back)).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitForIdle()
+        // An impatient double-tap: the second lands while Settings is still fading out and clickable.
+        compose.mainClock.autoAdvance = false
+        compose.onAllNodesWithContentDescription(text(R.string.back))[0].performClick()
+        compose.mainClock.advanceTimeBy(100)
+        compose.onAllNodesWithContentDescription(text(R.string.back))[0].performClick()
+        compose.mainClock.autoAdvance = true
+        // A second pop used to take the start destination with it and leave an empty screen.
+        compose.waitUntil(10_000) { compose.onAllNodesWithText("Stability press").fetchSemanticsNodes().isNotEmpty() }
+    }
+
     @Test fun customExerciseIsReallySavedAndSurvivesActivityRecreation() {
         compose.onNodeWithContentDescription(text(R.string.add_exercise)).performClick()
         compose.onNodeWithText(text(R.string.create_new_exercise)).performClick()

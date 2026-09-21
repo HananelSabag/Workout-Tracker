@@ -13,8 +13,8 @@ android {
         applicationId = "com.hananel.workouttracker2"
         minSdk = 33
         targetSdk = 35
-        versionCode = 7
-        versionName = "2.3.1"
+        versionCode = 8
+        versionName = "2.3.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -67,9 +67,6 @@ dependencies {
     
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0")
-    
-    // Work Manager (notifications)
-    implementation("androidx.work:work-runtime-ktx:2.9.0")
     
     // Navigation
     implementation("androidx.navigation:navigation-compose:2.7.7")
