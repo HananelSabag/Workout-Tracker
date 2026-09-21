@@ -7,10 +7,10 @@ timing, and a full training history.
   <img src="app/src/main/res/drawable/workout_logo.png" width="120" alt="Workout Tracker Logo"/>
 </p>
 
-**Latest build:** [`WorkoutTracker-v2.3.apk`](WorkoutTracker-v2.3.apk) — install directly on any
-Android 13+ device.
+**Latest build:** [`WorkoutTracker-v2.4.apk`](WorkoutTracker-v2.4.apk) — install directly on any
+Android 13+ device. It updates 2.2 and every 2.3.x build in place; workout data is kept.
 
-## Version 2.3 — original app, stability repairs
+## Version 2.4 — original app, stability repairs, safer edits
 
 Continues the original 2.2 application and package. The original exercise cards, workout flow,
 history and glass theme are retained. The day selector now has calendar dates and workout names,
@@ -19,6 +19,10 @@ adapted from the separate Rebuilt app.
 Repairs cover upgrade-safe names, non-destructive load failures, custom exercise persistence,
 ViewModel lifetime, asynchronous rest-timer commands and recovery, optional exact-alarm access,
 notification permissions and atomic settings/plan edits. See [delivery and verification](docs/DELIVERY-2.3.md).
+
+2.3.1–2.4 add a full code review: a failed save no longer freezes the screen, a double tap on back
+no longer leaves a blank screen, onboarding reopened from Help keeps working weights and asks before
+replacing a plan, deleting an exercise asks first, and "days ago" stays right across clock changes.
 
 ## ✨ Features
 

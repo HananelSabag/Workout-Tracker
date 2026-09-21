@@ -421,6 +421,27 @@ private fun OnboardingPage2(
     // State for custom workout builder
     var showWorkoutBuilder by remember { mutableStateOf(false) }
 
+    // Onboarding also opens from Settings → Help over a real plan, and either card replaces that
+    // plan — so a returning user is asked first. A first install goes straight through.
+    var pendingChoice by remember { mutableStateOf<ProgramChoice?>(null) }
+    suspend fun installDefault() {
+        // Same reset as the builder path below — never wipes weights.
+        repository.resetWeeklyProgress()
+        repository.saveWorkoutStructure(DefaultData.getDefaultWorkoutStructure())
+        onFinish()
+    }
+    fun choose(choice: ProgramChoice) {
+        scope.launch {
+            // Read at tap time rather than on first composition, so a quick tap can't slip past.
+            val hasProgram = repository.getWorkoutStructure().any { it.exercises.isNotEmpty() }
+            when {
+                hasProgram -> pendingChoice = choice
+                choice == ProgramChoice.DEFAULT -> installDefault()
+                else -> showWorkoutBuilder = true
+            }
+        }
+    }
+
     // Drawn in place, not navigated to: system back must close it like its own back arrow does.
     androidx.activity.compose.BackHandler(enabled = showWorkoutBuilder) { showWorkoutBuilder = false }
     
@@ -477,15 +498,7 @@ private fun OnboardingPage2(
                 // tint and a "Recommended" badge so first-time users default to a working setup.
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    onClick = {
-                        scope.launch {
-                            // Same reset as the builder path above — never wipes weights.
-                            repository.resetWeeklyProgress()
-                            val defaultStructure = DefaultData.getDefaultWorkoutStructure()
-                            repository.saveWorkoutStructure(defaultStructure)
-                            onFinish()
-                        }
-                    },
+                    onClick = { choose(ProgramChoice.DEFAULT) },
                     shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.primary,
@@ -539,7 +552,7 @@ private fun OnboardingPage2(
                 // Customize Option — secondary visual weight (outlined)
                 OutlinedCard(
                     modifier = Modifier.fillMaxWidth(),
-                    onClick = { showWorkoutBuilder = true },
+                    onClick = { choose(ProgramChoice.CUSTOM) },
                     shape = RoundedCornerShape(20.dp)
                 ) {
                     Row(
@@ -593,7 +606,36 @@ private fun OnboardingPage2(
             }
         }
     }
+
+    pendingChoice?.let { choice ->
+        AlertDialog(
+            onDismissRequest = { pendingChoice = null },
+            title = { Text(stringResource(R.string.replace_program_title)) },
+            text = { Text(stringResource(R.string.replace_program_message)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pendingChoice = null
+                        if (choice == ProgramChoice.DEFAULT) scope.launch { installDefault() }
+                        else showWorkoutBuilder = true
+                    }
+                ) {
+                    Text(
+                        stringResource(R.string.replace_program_confirm),
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingChoice = null }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
 }
+
+private enum class ProgramChoice { DEFAULT, CUSTOM }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

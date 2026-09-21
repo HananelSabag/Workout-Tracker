@@ -391,4 +391,10 @@
     <string name="data_load_error">לא הצלחנו לקרוא או לשמור את הנתונים. הנתונים הקיימים נשמרו. אפשר לנסות שוב.</string>
     <string name="retry_loading">נסה שוב</string>
     <string name="unnamed_exercise">תרגיל ללא שם</string>
+    <string name="more_options">אפשרויות נוספות</string>
+    <string name="delete_exercise_title">מחיקת תרגיל</string>
+    <string name="delete_exercise_message">התרגיל יוסר מהתוכנית יחד עם המשקל שלו. אימונים קודמים בהיסטוריה נשמרים.</string>
+    <string name="replace_program_title">להחליף את התוכנית?</string>
+    <string name="replace_program_message">התוכנית הנוכחית תוחלף. המשקלים וההיסטוריה נשמרים. כדי להשאיר אותה, לחץ על דלג.</string>
+    <string name="replace_program_confirm">החלף</string>
 </resources>

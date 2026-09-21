@@ -93,6 +93,8 @@ fun ExerciseCard(
     var showEditSheet by remember { mutableStateOf(false) }
     var showWeightSheet by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+    val displayName = exercise.customName.ifBlank { exercise.getDisplayName(LocalContext.current) }
 
     val glass = rememberGlassColors()
     val tint = when {
@@ -125,7 +127,7 @@ fun ExerciseCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = exercise.customName.ifBlank { exercise.getDisplayName(LocalContext.current) },
+                        text = displayName,
                         style = MaterialTheme.typography.titleLarge,
                         fontSize = 19.sp,
                         color = glass.onGlass,
@@ -149,7 +151,7 @@ fun ExerciseCard(
                         IconButton(onClick = { showMenu = true }, modifier = Modifier.size(36.dp)) {
                             Icon(
                                 imageVector = Icons.Default.MoreVert,
-                                contentDescription = null,
+                                contentDescription = stringResource(R.string.more_options),
                                 tint = glass.onGlassMuted
                             )
                         }
@@ -185,7 +187,9 @@ fun ExerciseCard(
                                         color = MaterialTheme.colorScheme.error
                                     )
                                 },
-                                onClick = { showMenu = false; onDeleteExercise() },
+                                // Deleting also drops the exercise's working weight, so it asks first —
+                                // the same rule as deleting an alarm or a workout from history.
+                                onClick = { showMenu = false; showDeleteConfirm = true },
                                 leadingIcon = {
                                     Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error)
                                 }
@@ -301,9 +305,46 @@ fun ExerciseCard(
             }
         )
     }
+    if (showDeleteConfirm && onDeleteExercise != null) {
+        GlassSheet(
+            title = stringResource(R.string.delete_exercise_title),
+            subtitle = displayName,
+            icon = Icons.Default.Delete,
+            accent = MaterialTheme.colorScheme.error,
+            onDismiss = { showDeleteConfirm = false }
+        ) {
+            Text(
+                text = stringResource(R.string.delete_exercise_message),
+                style = MaterialTheme.typography.bodyMedium,
+                color = glass.onGlassMuted
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                GhostButton(
+                    text = stringResource(R.string.cancel),
+                    onClick = { showDeleteConfirm = false },
+                    modifier = Modifier.weight(1f)
+                )
+                GradientButton(
+                    text = stringResource(R.string.delete),
+                    gradient = listOf(
+                        MaterialTheme.colorScheme.error,
+                        MaterialTheme.colorScheme.error.copy(alpha = 0.75f)
+                    ),
+                    onClick = {
+                        showDeleteConfirm = false
+                        onDeleteExercise()
+                    },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
     if (showWeightSheet) {
         WeightSheet(
-            exerciseName = exercise.customName.ifBlank { exercise.getDisplayName(LocalContext.current) },
+            exerciseName = displayName,
             initialWeight = weight,
             onDismiss = { showWeightSheet = false },
             onSave = {

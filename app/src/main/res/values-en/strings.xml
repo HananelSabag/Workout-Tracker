@@ -391,4 +391,10 @@
     <string name="data_load_error">Could not read or save your workout. Existing data has been retained. Please try again.</string>
     <string name="retry_loading">Try again</string>
     <string name="unnamed_exercise">Unnamed exercise</string>
+    <string name="more_options">More options</string>
+    <string name="delete_exercise_title">Delete exercise</string>
+    <string name="delete_exercise_message">The exercise will be removed from the plan along with its weight. Past workouts in history are kept.</string>
+    <string name="replace_program_title">Replace your program?</string>
+    <string name="replace_program_message">Your current program will be replaced. Weights and history are kept. To keep it, tap Skip.</string>
+    <string name="replace_program_confirm">Replace</string>
 </resources>

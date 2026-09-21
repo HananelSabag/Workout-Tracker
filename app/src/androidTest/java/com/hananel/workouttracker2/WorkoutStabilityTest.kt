@@ -49,6 +49,25 @@ class WorkoutStabilityTest {
         runBlocking { repository.clearTimerState() }
     }
 
+    @Test fun deletingAnExerciseAsksFirstAndKeepsItOnCancel() {
+        runBlocking { repository.updateExerciseWeight(exercise.id, 30f) }
+        fun openDelete() {
+            compose.onNodeWithContentDescription(text(R.string.more_options)).performClick()
+            compose.onNodeWithText(text(R.string.delete)).performClick()
+            compose.waitUntil(10_000) { compose.onAllNodesWithText(text(R.string.delete_exercise_title)).fetchSemanticsNodes().isNotEmpty() }
+        }
+
+        openDelete()
+        compose.onNodeWithText(text(R.string.cancel)).performClick()
+        compose.waitUntil(10_000) { compose.onAllNodesWithText(text(R.string.delete_exercise_title)).fetchSemanticsNodes().isEmpty() }
+        assertEquals(1, runBlocking { repository.getWorkoutStructure().single().exercises.size })
+        assertEquals(30f, runBlocking { repository.getWorkoutProgress().exerciseWeights[exercise.id] } ?: 0f, 0.01f)
+
+        openDelete()
+        compose.onNodeWithText(text(R.string.delete)).performClick()
+        compose.waitUntil(10_000) { runBlocking { repository.getWorkoutStructure().single().exercises.isEmpty() } }
+    }
+
     @Test fun doubleTappingBackCannotPopTheWorkoutScreenToo() {
         compose.onNodeWithContentDescription(text(R.string.settings)).performClick()
         compose.waitUntil(10_000) { compose.onAllNodesWithContentDescription(text(R.string.back)).fetchSemanticsNodes().isNotEmpty() }

@@ -13,8 +13,8 @@ android {
         applicationId = "com.hananel.workouttracker2"
         minSdk = 33
         targetSdk = 35
-        versionCode = 8
-        versionName = "2.3.2"
+        versionCode = 9
+        versionName = "2.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
