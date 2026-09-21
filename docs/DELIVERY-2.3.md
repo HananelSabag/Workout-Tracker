@@ -50,3 +50,38 @@ $env:JAVA_HOME = 'C:\Program Files\Android\Android Studio\jbr'
 
 החלטות Android נשענות על תיעוד [הפעלת שירות foreground](https://developer.android.com/develop/background-work/services/fgs/launch) ו־[תזמון שעונים והרשאות](https://developer.android.com/develop/background-work/services/alarms).
 
+---
+
+# 2.3.1 — בדיקת יציבות אחרונה
+
+16 בספטמבר 2026 · versionCode 7. הבינארי שונה מ־2.3, ולכן קיבל מספר גרסה נפרד.
+
+## שני תיקונים
+
+**תקיעת מסך אחרי כשלון כתיבה.** `rememberStorageScope()` נבנה על `rememberCoroutineScope`, שמחזיר Job
+שהוא ילד של ה־Recomposer. Job רגיל מעביר כשלון של ילד כלפי מעלה, כך שכתיבה שנכשלה בהגדרות, בשעונים,
+באונבורדינג, בבונה התוכניות או במסך האימון ביטלה את ה־Recomposer עצמו: הדגל `StorageFailure.failed`
+נדלק, אבל ה־composition כבר מת ומסך השגיאה לא צויר — האפליקציה נתקעה על הפריים האחרון. הוחלף
+ב־`SupervisorJob`, שמשאיר את הכשלון מקומי. המסלול אינו תיאורטי: `updateWorkoutStructure` זורק חריגה
+על תוכנית פגומה, כפי ש־`UpgradeRegressionTest.corruptPlanIsReportedAndItsOriginalBytesAreRetained`
+כבר מוודא.
+
+**שחזור טיימר כשהאפליקציה יורדת לרקע.** `recoverTimerIfInterrupted` נקרא ב־`ON_RESUME` אבל קורא מהדיסק
+לפני שהוא מפעיל את השירות. אם האפליקציה איבדה חזית בינתיים, אנדרואיד מסרב להפעלת foreground וזרק
+`IllegalStateException` שהעלה מסך שגיאה. החריגה נתפסת ונרשמת ללוג; ה־resume הבא מנסה שוב.
+
+## בדיקות
+
+- 39 בדיקות Android עברו באמולטור Android 16, כולל רגרסיה חדשה
+  (`StorageFailureScopeTest`) שמוודאת שהמסך ממשיך להתרנדר אחרי כתיבה שנכשלה.
+- בדיקות JVM, `lintVitalRelease` ובניית release עברו.
+- **שדרוג במקום נבדק בפועל:** הותקן 2.2 באמולטור, נרשם סט דרך הממשק, ואז הותקן 2.3.1 עם `install -r`
+  בלי הסרה. `firstInstallTime` נשאר על כנו ו־`lastUpdateTime` התעדכן — עדכון, לא התקנה מחדש. אחרי
+  ההפעלה הסט, האימון הפעיל, המשקלים והתוכנית היו במקומם, וכרטיסיות הימים החדשות הוצגו על הנתונים הישנים.
+- תעודת החתימה זהה ל־2.2: `0bc72414ea223f18d63ea1ebcdc2972f99ba2dc02f826a061478caeb4abb98f2`.
+
+## ידוע ולא טופל
+
+`work-runtime-ktx` מוצהר ב־dependencies ואינו בשימוש. WorkManager מאתחל את עצמו דרך androidx.startup
+בכל הפעלה, כלומר עלות אתחול בלי תמורה. לא הוסר כדי לא לשנות את גרף התלויות לפני מסירה.
+

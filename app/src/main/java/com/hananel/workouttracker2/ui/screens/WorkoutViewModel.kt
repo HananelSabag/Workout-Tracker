@@ -310,7 +310,16 @@ class WorkoutViewModel(
      */
     fun recoverTimerIfInterrupted(context: Context) {
         viewModelScope.launch(errorHandler) {
-            if (repository.getTimerState() != null && !TimerService.isRunning) TimerService.recover(context)
+            if (repository.getTimerState() == null || TimerService.isRunning) return@launch
+            // Resume triggers this, but the disk read above suspends, and the app can be backgrounded
+            // again before it returns — by which point Android refuses the foreground start. A rest
+            // that can't be resumed right now is not worth throwing the user onto the error screen;
+            // the next resume tries again.
+            try {
+                TimerService.recover(context)
+            } catch (e: IllegalStateException) {
+                android.util.Log.w("WorkoutViewModel", "Timer recovery unavailable while backgrounded", e)
+            }
         }
     }
 
