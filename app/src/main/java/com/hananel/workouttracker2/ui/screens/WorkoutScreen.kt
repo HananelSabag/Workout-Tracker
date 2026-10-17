@@ -1,5 +1,8 @@
 package com.hananel.workouttracker2.ui.screens
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -20,6 +23,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -34,7 +38,7 @@ import com.hananel.workouttracker2.ui.components.AddExerciseDialog
 import com.hananel.workouttracker2.ui.components.AddExerciseMenu
 import com.hananel.workouttracker2.ui.components.DaySelector
 import com.hananel.workouttracker2.ui.components.ExerciseCard
-import com.hananel.workouttracker2.ui.components.TimerDialog
+import com.hananel.workouttracker2.ui.components.TimerBottomSheet
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -47,6 +51,7 @@ fun WorkoutScreen(
     onNavigateToWorkoutBuilder: () -> Unit,
     onResetWeekly: () -> Unit,
     shouldOpenTimerDialog: Boolean = false,
+    onTimerDialogOpened: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -55,62 +60,59 @@ fun WorkoutScreen(
     val workoutProgress by viewModel.workoutProgress.collectAsState()
     val timerState by viewModel.timerState.collectAsState()
     val selectedDayIndex by viewModel.selectedDayIndex.collectAsState()
-    
+
     var enabledDays by remember { mutableStateOf(listOf(0, 1, 2, 3, 4)) }
-    
+
     LaunchedEffect(Unit) {
         repository.getUserPreferencesFlow().collect { prefs ->
             enabledDays = prefs.enabledDays
         }
     }
-    
-    // Recompute currentWorkout when selectedDayIndex or workoutDays change
+
     val currentWorkout = remember(selectedDayIndex, workoutDays) {
         workoutDays.find { it.dayIndex == selectedDayIndex }
     }
     var showResetDialog by remember { mutableStateOf(false) }
     var showAddExerciseMenu by remember { mutableStateOf(false) }
     var showCreateExerciseDialog by remember { mutableStateOf(false) }
-    var showTimerDialog by remember { mutableStateOf(false) }
-    // Track if user manually closed the dialog to prevent auto-reopening
-    var userClosedDialog by remember { mutableStateOf(false) }
-    
+    var showTimerSheet by remember { mutableStateOf(false) }
+    // Tracks if user deliberately dismissed the sheet — prevents auto-reopen on state changes
+    var userClosedSheet by remember { mutableStateOf(false) }
+
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    
-    // Auto-open timer dialog ONLY when a NEW timer starts (not on every state change)
+
+    // Auto-open timer sheet ONLY when a NEW timer starts (exerciseId or currentSet key changes)
     LaunchedEffect(timerState?.exerciseId, timerState?.currentSet) {
         val currentTimerState = timerState
         when {
             currentTimerState == null -> {
-                // Timer cleared - close dialog and reset flag
-                showTimerDialog = false
-                userClosedDialog = false
+                showTimerSheet = false
+                userClosedSheet = false
             }
-            currentTimerState.isRunning && !userClosedDialog -> {
-                // Timer is running and user didn't close it - show dialog
-                showTimerDialog = true
+            currentTimerState.isRunning && !userClosedSheet -> {
+                showTimerSheet = true
             }
         }
     }
-    
-    // Open timer dialog when coming from notification
+
+    // Open sheet when app is opened from a notification tap
     LaunchedEffect(shouldOpenTimerDialog) {
         if (shouldOpenTimerDialog && timerState != null) {
-            userClosedDialog = false
-            showTimerDialog = true
+            userClosedSheet = false
+            showTimerSheet = true
+            onTimerDialogOpened() // Resets the flag in MainActivity so it doesn't re-fire
         }
     }
-    
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { 
+                title = {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        // Logo with white background
                         Surface(
                             shape = RoundedCornerShape(10.dp),
                             color = Color.White,
@@ -136,7 +138,6 @@ fun WorkoutScreen(
                     }
                 },
                 actions = {
-                    // Refresh button with subtle background
                     FilledTonalIconButton(
                         onClick = { showResetDialog = true },
                         modifier = Modifier.size(36.dp),
@@ -151,10 +152,9 @@ fun WorkoutScreen(
                             modifier = Modifier.size(20.dp)
                         )
                     }
-                    
+
                     Spacer(modifier = Modifier.width(4.dp))
-                    
-                    // Notifications button
+
                     FilledTonalIconButton(
                         onClick = onNavigateToAlarms,
                         modifier = Modifier.size(36.dp),
@@ -169,10 +169,9 @@ fun WorkoutScreen(
                             modifier = Modifier.size(20.dp)
                         )
                     }
-                    
+
                     Spacer(modifier = Modifier.width(4.dp))
-                    
-                    // Settings button
+
                     FilledTonalIconButton(
                         onClick = onNavigateToSettings,
                         modifier = Modifier.size(36.dp),
@@ -192,9 +191,7 @@ fun WorkoutScreen(
         },
         floatingActionButton = {
             if (currentWorkout != null) {
-                FloatingActionButton(
-                    onClick = { showAddExerciseMenu = true }
-                ) {
+                FloatingActionButton(onClick = { showAddExerciseMenu = true }) {
                     Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_exercise))
                 }
             }
@@ -207,7 +204,6 @@ fun WorkoutScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Only show Day Selector when there are workout days
             if (workoutDays.isNotEmpty()) {
                 DaySelector(
                     selectedDayIndex = selectedDayIndex,
@@ -215,83 +211,139 @@ fun WorkoutScreen(
                     onDaySelected = { viewModel.selectDay(it) }
                 )
             }
-            
-            // Timer Running Indicator
-        timerState?.let { state ->
-            // Determine banner color based on state
-            val isRestComplete = !state.isRunning && state.timeLeft == 0
-            val bannerColor = if (isRestComplete) Color(0xFFDCFCE7) else Color(0xFFFEF3C7) // Green when complete, yellow when running
-            val textColor = if (isRestComplete) Color(0xFF166534) else Color(0xFF92400E)
-            val iconColor = if (isRestComplete) Color(0xFF22C55E) else Color(0xFFD97706)
-            
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .clickable { showTimerDialog = true },
-                    shape = RoundedCornerShape(12.dp),
-                    color = bannerColor,
+
+            // ── Timer Running Banner ──────────────────────────────────────────
+            timerState?.let { state ->
+                val isRestComplete = !state.isRunning && state.timeLeft == 0
+
+                val bannerBg by animateColorAsState(
+                    targetValue = if (isRestComplete) Color(0xFFDCFCE7) else Color(0xFFFFF7ED),
+                    animationSpec = tween(600),
+                    label = "bannerBg"
+                )
+                val textColor by animateColorAsState(
+                    targetValue = if (isRestComplete) Color(0xFF166534) else Color(0xFF92400E),
+                    animationSpec = tween(600),
+                    label = "textColor"
+                )
+                val iconColor by animateColorAsState(
+                    targetValue = if (isRestComplete) Color(0xFF22C55E) else Color(0xFFD97706),
+                    animationSpec = tween(600),
+                    label = "iconColor"
+                )
+
+                // Pulse the icon when rest is complete
+                val infiniteTransition = rememberInfiniteTransition(label = "bannerPulse")
+                val pulseAlpha by infiniteTransition.animateFloat(
+                    initialValue = 1f,
+                    targetValue = if (isRestComplete) 0.55f else 1f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(700, easing = EaseInOut),
+                        repeatMode = RepeatMode.Reverse
+                    ),
+                    label = "pulseAlpha"
+                )
+
+                val progressFraction = if (state.totalTime > 0)
+                    state.timeLeft.toFloat() / state.totalTime.toFloat()
+                else 0f
+                val animatedProgress by animateFloatAsState(
+                    targetValue = progressFraction,
+                    animationSpec = tween(900),
+                    label = "timerProgress"
+                )
+
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .clickable {
+                            userClosedSheet = false
+                            showTimerSheet = true
+                        },
+                    shape = RoundedCornerShape(16.dp),
+                    color = bannerBg,
                     tonalElevation = 2.dp
                 ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                    Column {
                         Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                imageVector = if (isRestComplete) Icons.Default.Check else Icons.Default.Timer,
-                                contentDescription = null,
-                                tint = iconColor,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Column {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(
+                                    imageVector = if (isRestComplete) Icons.Default.Check else Icons.Default.Timer,
+                                    contentDescription = null,
+                                    tint = iconColor,
+                                    modifier = Modifier
+                                        .size(22.dp)
+                                        .alpha(if (isRestComplete) pulseAlpha else 1f)
+                                )
+                                Column {
+                                    Text(
+                                        text = state.exerciseName,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = textColor
+                                    )
+                                    Text(
+                                        text = if (isRestComplete)
+                                            stringResource(R.string.tap_for_next_set)
+                                        else
+                                            stringResource(R.string.set_of, state.currentSet, state.totalSets),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = textColor.copy(alpha = 0.75f)
+                                    )
+                                }
+                            }
+
+                            AnimatedContent(
+                                targetState = if (isRestComplete)
+                                    stringResource(R.string.rest_complete)
+                                else
+                                    formatTime(state.timeLeft),
+                                label = "bannerTime"
+                            ) { timeStr ->
                                 Text(
-                                    text = state.exerciseName,
-                                    style = MaterialTheme.typography.labelMedium,
+                                    text = timeStr,
+                                    style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = textColor
                                 )
-                                Text(
-                                    text = if (isRestComplete) {
-                                        stringResource(R.string.tap_for_next_set)
-                                    } else {
-                                        stringResource(R.string.set_of, state.currentSet, state.totalSets)
-                                    },
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = textColor.copy(alpha = 0.8f)
-                                )
                             }
                         }
-                        Text(
-                            text = if (isRestComplete) {
-                                stringResource(R.string.rest_complete)
-                            } else {
-                                formatTime(state.timeLeft)
-                            },
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = textColor
-                        )
+
+                        // Progress bar while counting down
+                        if (!isRestComplete) {
+                            LinearProgressIndicator(
+                                progress = { animatedProgress },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(3.dp),
+                                color = Color(0xFFD97706),
+                                trackColor = Color(0xFFD97706).copy(alpha = 0.2f),
+                            )
+                        }
                     }
                 }
             }
-            
-            Spacer(modifier = Modifier.height(if (timerState != null) 8.dp else 16.dp))
-            
-            // Content
+
+            Spacer(modifier = Modifier.height(if (timerState != null) 4.dp else 16.dp))
+
+            // ── Exercise List ─────────────────────────────────────────────────
             if (currentWorkout != null && currentWorkout.exercises.isNotEmpty()) {
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(horizontal = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(bottom = 16.dp)
+                    contentPadding = PaddingValues(bottom = 80.dp)
                 ) {
-                    // Workout name header with edit button
                     item {
                         Row(
                             modifier = Modifier
@@ -306,10 +358,9 @@ fun WorkoutScreen(
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier.weight(1f)
                             )
-                            
-                            // Edit button
+
                             var showEditDialog by remember { mutableStateOf(false) }
-                            
+
                             IconButton(
                                 onClick = { showEditDialog = true },
                                 modifier = Modifier.size(40.dp)
@@ -320,10 +371,9 @@ fun WorkoutScreen(
                                     tint = MaterialTheme.colorScheme.primary
                                 )
                             }
-                            
+
                             if (showEditDialog) {
                                 var dayName by remember { mutableStateOf(currentWorkout.customName) }
-                                
                                 AlertDialog(
                                     onDismissRequest = { showEditDialog = false },
                                     title = { Text(stringResource(R.string.rename_day)) },
@@ -337,14 +387,10 @@ fun WorkoutScreen(
                                         )
                                     },
                                     confirmButton = {
-                                        TextButton(
-                                            onClick = {
-                                                viewModel.renameWorkoutDay(currentWorkout.id, dayName)
-                                                showEditDialog = false
-                                            }
-                                        ) {
-                                            Text(stringResource(R.string.save))
-                                        }
+                                        TextButton(onClick = {
+                                            viewModel.renameWorkoutDay(currentWorkout.id, dayName)
+                                            showEditDialog = false
+                                        }) { Text(stringResource(R.string.save)) }
                                     },
                                     dismissButton = {
                                         TextButton(onClick = { showEditDialog = false }) {
@@ -355,45 +401,30 @@ fun WorkoutScreen(
                             }
                         }
                     }
-                    
-                    // Exercises - Using reactive state from workoutProgress
+
                     items(currentWorkout.exercises, key = { it.id }) { exercise ->
-                        // Read reactive state directly from the flow
                         val isCompleted = remember(workoutProgress) {
                             workoutProgress?.completedExercises?.get(exercise.id) ?: false
                         }
-                        
-                        // For completed sets: if timer is running for THIS exercise, use timer state
-                        // This ensures UI is in sync with service state
                         val completedSets = remember(workoutProgress, timerState) {
-                            val currentTimerState = timerState
-                            if (currentTimerState?.exerciseId == exercise.id) {
-                                // Timer is running for this exercise - use timer's completed sets
-                                currentTimerState.completedSets
-                            } else {
-                                // No timer or different exercise - use progress data
-                                workoutProgress?.exerciseCompletedSets?.get(exercise.id) ?: 0
-                            }
+                            val ts = timerState
+                            if (ts?.exerciseId == exercise.id) ts.completedSets
+                            else workoutProgress?.exerciseCompletedSets?.get(exercise.id) ?: 0
                         }
-                        
                         val weight = remember(workoutProgress) {
                             workoutProgress?.exerciseWeights?.get(exercise.id) ?: 0f
                         }
-                        
+
                         ExerciseCard(
                             exercise = exercise,
                             isCompleted = isCompleted,
                             completedSets = completedSets,
                             weight = weight,
-                            onWeightChange = { newWeight ->
-                                viewModel.updateExerciseWeight(exercise.id, newWeight)
-                            },
+                            onWeightChange = { viewModel.updateExerciseWeight(exercise.id, it) },
                             onStartRest = {
-                                // Prevent starting new timer if one is already running
                                 if (timerState == null) {
                                     viewModel.startTimer(exercise, context)
                                 } else {
-                                    // Show snackbar with action to view/manage existing timer
                                     scope.launch {
                                         val result = snackbarHostState.showSnackbar(
                                             message = context.getString(R.string.timer_already_running),
@@ -401,36 +432,26 @@ fun WorkoutScreen(
                                             duration = SnackbarDuration.Long
                                         )
                                         if (result == SnackbarResult.ActionPerformed) {
-                                            // Open timer dialog so user can see/stop the running timer
-                                            userClosedDialog = false
-                                            showTimerDialog = true
+                                            userClosedSheet = false
+                                            showTimerSheet = true
                                         }
                                     }
                                 }
                             },
-                            onToggleComplete = {
-                                viewModel.toggleExerciseCompletion(exercise.id)
-                            },
+                            onToggleComplete = { viewModel.toggleExerciseCompletion(exercise.id) },
                             onEditExercise = { sets, reps, restTime, newWeight ->
                                 viewModel.updateExercise(exercise.id, sets, reps, restTime)
-                                if (newWeight > 0) {
-                                    viewModel.updateExerciseWeight(exercise.id, newWeight)
-                                }
+                                if (newWeight > 0) viewModel.updateExerciseWeight(exercise.id, newWeight)
                             },
                             onDeleteExercise = {
-                                currentWorkout?.let { workout ->
-                                    viewModel.deleteExercise(workout.id, exercise.id)
-                                }
+                                currentWorkout?.let { viewModel.deleteExercise(it.id, exercise.id) }
                             }
                         )
                     }
                 }
             } else if (workoutDays.isEmpty()) {
-                // No workout structure at all - show setup button
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(32.dp),
+                    modifier = Modifier.fillMaxSize().padding(32.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(
@@ -460,16 +481,10 @@ fun WorkoutScreen(
                         Spacer(modifier = Modifier.height(32.dp))
                         Button(
                             onClick = onNavigateToWorkoutBuilder,
-                            modifier = Modifier
-                                .fillMaxWidth(0.7f)
-                                .height(56.dp),
+                            modifier = Modifier.fillMaxWidth(0.7f).height(56.dp),
                             shape = RoundedCornerShape(16.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = null,
-                                modifier = Modifier.size(24.dp)
-                            )
+                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(24.dp))
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = stringResource(R.string.setup_workout_plan),
@@ -480,11 +495,8 @@ fun WorkoutScreen(
                     }
                 }
             } else {
-                // Rest day or no exercises for this day
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(32.dp),
+                    modifier = Modifier.fillMaxSize().padding(32.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(
@@ -508,20 +520,16 @@ fun WorkoutScreen(
                 }
             }
         }
-        
-        // Timer Dialog
-        if (showTimerDialog && timerState != null) {
-            TimerDialog(
+
+        // ── Timer Bottom Sheet ────────────────────────────────────────────────
+        if (showTimerSheet && timerState != null) {
+            TimerBottomSheet(
                 timerState = timerState!!,
-                onNextSet = {
-                    // Continue to next set - let service handle everything
-                    viewModel.completeSet(context)
-                },
+                onNextSet = { viewModel.completeSet(context) },
                 onFinish = {
-                    // Finish button on last set - stop timer and mark complete
                     viewModel.finishExercise(context)
-                    userClosedDialog = true
-                    showTimerDialog = false
+                    userClosedSheet = true
+                    showTimerSheet = false
                     scope.launch {
                         snackbarHostState.showSnackbar(
                             message = context.getString(R.string.exercise_completed),
@@ -530,38 +538,28 @@ fun WorkoutScreen(
                     }
                 },
                 onStop = {
-                    // Stop immediately (user wants to quit)
                     viewModel.stopTimer(context)
-                    userClosedDialog = true
-                    showTimerDialog = false
+                    userClosedSheet = true
+                    showTimerSheet = false
                 },
-                onClose = {
-                    // Close dialog but keep timer running - don't stop the service
-                    // The timer indicator banner will still show
-                    userClosedDialog = true
-                    showTimerDialog = false
-                },
-                onTimerTick = { timeLeft ->
-                    // Not needed anymore - timer runs in service
+                onDismiss = {
+                    userClosedSheet = true
+                    showTimerSheet = false
                 }
             )
         }
-        
-        
-        // Add Exercise Menu
+
+        // ── Add Exercise Menu ─────────────────────────────────────────────────
         if (showAddExerciseMenu) {
             AddExerciseMenu(
                 onDismiss = { showAddExerciseMenu = false },
                 onCreateNew = { showCreateExerciseDialog = true },
                 onChooseFromCatalog = {
-                    currentWorkout?.let { workout ->
-                        onNavigateToCatalog(workout.id)
-                    }
+                    currentWorkout?.let { onNavigateToCatalog(it.id) }
                 }
             )
         }
-        
-        // Create Custom Exercise Dialog
+
         if (showCreateExerciseDialog) {
             AddExerciseDialog(
                 onDismiss = { showCreateExerciseDialog = false },
@@ -576,20 +574,14 @@ fun WorkoutScreen(
                 }
             )
         }
-        
-        // Reset Confirmation Dialog
+
         if (showResetDialog) {
             AlertDialog(
                 onDismissRequest = { showResetDialog = false },
                 title = { Text(stringResource(R.string.reset_confirmation)) },
                 text = { Text(stringResource(R.string.reset_confirmation_message)) },
                 confirmButton = {
-                    TextButton(
-                        onClick = {
-                            onResetWeekly()
-                            showResetDialog = false
-                        }
-                    ) {
+                    TextButton(onClick = { onResetWeekly(); showResetDialog = false }) {
                         Text(stringResource(R.string.confirm))
                     }
                 },
