@@ -124,3 +124,10 @@ Thumbs.db
 app/build/
 app/release/
 app/debug/
+
+# Local-only: AI-agent notes, IDE settings and build outputs
+.idea/
+.vscode/
+workflow_state.md
+*.apk
+*.log

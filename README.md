@@ -7,7 +7,7 @@ timing, and a full training history.
   <img src="app/src/main/res/drawable/workout_logo.png" width="120" alt="Workout Tracker Logo"/>
 </p>
 
-**Latest build:** [`WorkoutTracker-v2.4.apk`](WorkoutTracker-v2.4.apk) — install directly on any
+**Latest build:** [`WorkoutTracker-v2.4.apk`](https://github.com/HananelSabag/Workout-Tracker/releases/latest) — install directly on any
 Android 13+ device. It updates 2.2 and every 2.3.x build in place; workout data is kept.
 
 ## Version 2.4 — original app, stability repairs, safer edits
@@ -137,8 +137,10 @@ git clone https://github.com/HananelSabag/Workout-Tracker.git
 ./gradlew assembleDebug
 ```
 
-The release APK checked in at the repo root is signed with the auto-generated debug key so it
-installs straight from GitHub. Swap in a real keystore before any Play Store upload.
+The APK on the Releases page is signed with the auto-generated debug key so it
+installs straight from GitHub.
+
+> The redesign continues in [Workout-Rebuilt](https://github.com/HananelSabag/Workout-Rebuilt) (version 3.x, exercise-first glass interface). Swap in a real keystore before any Play Store upload.
 
 ### Tests
 
